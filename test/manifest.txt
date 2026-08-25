@@ -1,0 +1,7 @@
+-- sunfish.lua update manifest (test build, multi-file)
+SCRIPT_VERSION = "2.608251919"
+
+CHANGELOG = {
+   "Split into 7 modular files (core, search, ui, help, mate1, challenge, main)",
+   "Hot-patch: 'u' now downloads and applies all parts in the same session, no restart needed",
+}
