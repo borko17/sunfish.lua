@@ -402,7 +402,3 @@ function aipuzMate1()
       end
    end
 end
-
--- Challenge mode ("abc") - "Challenge Game": mate-in-N-moves puzzle vs Sunfish, with optional on-board hint
-
--- Silences binding.exec() for duration of fn() - suppresses "(depth X, Nk nodes)" spam when search() runs in the background for a hint
