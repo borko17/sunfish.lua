@@ -6,7 +6,6 @@ CHANGELOG = {
    "Added Challenge mode ('abc'): random position (10-20 pieces), play until mate/draw/quit",
    "Toggleable move hints in Challenge mode (press 'th')",
    "Separate, weaker node budget for Sunfish's replies in Challenge mode",
-}
    "Split into 7 modular files (core, search, ui, help, mate1, challenge, main)",
    
 }
