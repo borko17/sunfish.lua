@@ -1,5 +1,3 @@
--- sunfish.lua Chess engine, Lua port chain: 1. Original algorithm: Sunfish (Python) by Thomas Ahle https://github.com/thomasahle/sunfish - BSD license 2. Initial Lua transpilation attributed to Soumith Chintala 3. Extended for Yantra Launcher / Android (Luaj-jse 3.0.1), with UI, save/load, puzzle mode, and search tuning, by borko17 (https://github.com/borko17/sunfish-lua) (with help from Claude AI).
-
 -- CONFIG has moved to loader.lua (it runs first and sets USE_UNICODE_PIECES,
 -- SHOW_ANNOTATIONS, CHALLENGE_MIN_PIECES, CHALLENGE_MAX_PIECES,
 -- CHALLENGE_GEN_ATTEMPTS, CHALLENGE_HINTS_ENABLED, NODES_SEARCHED,
@@ -32,10 +30,9 @@ function echoW(msg) binding.exec("echo -w " .. msg) end -- warning/heading
 
 -- Update info
 -- Loader always fetches the latest version of every part on each /run, so the
--- user is always on the newest code already. 'u' here just reports what version
--- is currently running and what's new upstream, in case a newer one exists on
--- GitHub -- it takes effect the next time the script is run (/run), not live.
-SCRIPT_VERSION = "2.608260242"
+-- user is always on the newest code already -- there's nothing to compare against
+-- locally. 'u' here just reports the version and changelog currently published
+-- in the manifest on GitHub.
 UPDATE_BASE_URL = "https://raw.githubusercontent.com/borko17/sunfish.lua/main/test/"
 MANIFEST_URL = UPDATE_BASE_URL .. "manifest.txt"
 
@@ -102,13 +99,7 @@ function checkForUpdate()
       return
    end
 
-   if remoteVersion == SCRIPT_VERSION then
-      echoS("You have the latest version: " .. SCRIPT_VERSION)
-      return
-   end
-
-   echoW("New version available: " .. remoteVersion .. " (current: " .. SCRIPT_VERSION .. ")")
-   print("It will be applied next time you run the script.")
+   echoS("Running version: " .. remoteVersion)
    local remoteChangelog = parseChangelog(result)
    if remoteChangelog then
       printChangelog(remoteChangelog, remoteVersion)
