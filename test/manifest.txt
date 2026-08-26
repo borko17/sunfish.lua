@@ -1,5 +1,5 @@
 -- sunfish.lua update manifest (test build, multi-file)
-SCRIPT_VERSION = "2.608251920"
+SCRIPT_VERSION = "2.608251919"
 
 CHANGELOG = {
    "Split into 7 modular files (core, search, ui, help, mate1, challenge, main)",
