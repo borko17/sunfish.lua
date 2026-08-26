@@ -1,4 +1,10 @@
-TABLE_SIZE = NODES_SEARCHED * 25 -- scaled off NODES_SEARCHED so it doesn't thrash; upstream's 1e6 too heavy for Luaj-jse on phone
+-- sunfish.lua Chess engine, Lua port chain: 1. Original algorithm: Sunfish (Python) by Thomas Ahle https://github.com/thomasahle/sunfish - BSD license 2. Initial Lua transpilation attributed to Soumith Chintala 3. Extended for Yantra Launcher / Android (Luaj-jse 3.0.1), with UI, save/load, puzzle mode, and search tuning, by borko17 (https://github.com/borko17/sunfish-lua) (with help from Claude AI).
+
+-- CONFIG has moved to loader.lua (it runs first and sets USE_UNICODE_PIECES,
+-- SHOW_ANNOTATIONS, CHALLENGE_MIN_PIECES, CHALLENGE_MAX_PIECES,
+-- CHALLENGE_GEN_ATTEMPTS, CHALLENGE_HINTS_ENABLED, NODES_SEARCHED,
+-- CHALLENGE_ENGINE_NODES, and TABLE_SIZE as globals before any part below runs).
+
 MATE_VALUE = 30000 -- exceeds 8*queen+2*(rook+knight+bishop); king value is double this
 MATE_UPPER = 60000 + (10 * 2529) -- search() scores mate near this, not MATE_VALUE - callers must match
 
@@ -772,4 +778,3 @@ nodes = 0 -- module-scoped: shared by search()'s loop and the inner bound() clos
 -- Quiescence value floor: deeper nodes admit slightly weaker captures/threats before cutting off
 QS = 40
 QS_A = 140
-
