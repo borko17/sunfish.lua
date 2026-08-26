@@ -1,14 +1,14 @@
--- sunfish.lua Chess engine, Lua port chain: 1. Original algorithm: Sunfish (Python) by Thomas Ahle https://github.com/thomasahle/sunfish - BSD license 2. Initial Lua transpilation attributed to Soumith Chintala 3. Extended for Yantra Launcher / Android (Luaj-jse 3.0.1), with UI, save/load, puzzle mode, and search tuning, by borko17 (https://github.com/borko17/sunfish-lua) (with help from Claude AI).
-
 -- CONFIG: Options at the top
 USE_UNICODE_PIECES = false
 SHOW_ANNOTATIONS = true
 
 CHALLENGE_MIN_PIECES = 10
 CHALLENGE_MAX_PIECES = 20
+CHALLENGE_GEN_ATTEMPTS = 400
 CHALLENGE_HINTS_ENABLED = false -- shows suggested move; toggle with 'th'
 NODES_SEARCHED = 2000 -- node budget/search; soft limit, checked only between depths
 CHALLENGE_ENGINE_NODES = 600 -- separate, weaker budget for Sunfish's replies in Challenge mode
+TABLE_SIZE = NODES_SEARCHED * 25 -- scaled off NODES_SEARCHED so it doesn't thrash; upstream's 1e6 too heavy for Luaj-jse on phone
 
 -- sunfish.lua bootstrap loader
 -- This is the ONLY file you paste into Yantra's `scripts` editor.
