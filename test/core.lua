@@ -38,17 +38,14 @@ function echoE(msg) binding.exec("echo -e " .. msg) end -- error
 function echoS(msg) binding.exec("echo -s " .. msg) end -- success
 function echoW(msg) binding.exec("echo -w " .. msg) end -- warning/heading
 
--- Update / hot-patch system
--- Every part is versioned together: manifest.txt carries SCRIPT_VERSION + CHANGELOG
--- + the list of part files. 'u' always fetches ALL parts when the version differs,
--- load()s each one in order into _G (overwriting existing functions/vars), and the
--- running game continues immediately with the patched code -- no restart needed.
+-- Update info
+-- Loader always fetches the latest version of every part on each /run, so the
+-- user is always on the newest code already. 'u' here just reports what version
+-- is currently running and what's new upstream, in case a newer one exists on
+-- GitHub -- it takes effect the next time the script is run (/run), not live.
 SCRIPT_VERSION = "2.608251919"
 UPDATE_BASE_URL = "https://raw.githubusercontent.com/borko17/sunfish.lua/main/test/"
 MANIFEST_URL = UPDATE_BASE_URL .. "manifest.txt"
--- Load order matters: later parts depend on functions/tables defined by earlier ones.
-MANIFEST_PARTS = {"core.lua", "search.lua", "ui.lua", "help.lua", "mate1.lua", "challenge.lua", "main.lua"}
-CACHE_PREFIX = "sunfish_cache_" -- local file name prefix, if io.open is available in this Luaj sandbox
 
 -- Low-level GET, same java.net.URL / BufferedReader approach already proven to work
 -- from the original single-file checkForUpdate().
@@ -98,67 +95,6 @@ function printChangelog(list, versionLabel)
    end
 end
 
--- Best-effort local cache: silently no-ops if io.open isn't available in this
--- Luaj/Yantra sandbox (scripts folder is internal and may not be writable).
--- On failure, hot-patch still works -- it just re-fetches from GitHub every time.
-function cacheWrite(name, content)
-   local ok = pcall(function()
-      local f = io.open(CACHE_PREFIX .. name, "w")
-      if not f then error("no io") end
-      f:write(content)
-      f:close()
-   end)
-   return ok
-end
-
-function cacheRead(name)
-   local ok, content = pcall(function()
-      local f = io.open(CACHE_PREFIX .. name, "r")
-      if not f then error("no io") end
-      local c = f:read("*a")
-      f:close()
-      return c
-   end)
-   if ok then return content end
-   return nil
-end
-
--- Fetches every part in MANIFEST_PARTS and load()s each one in sequence into the
--- current global scope, so all functions/tables get replaced with the patched
--- versions immediately -- no restart of the script needed.
-function applyHotPatch(remoteVersion)
-   echoW("Downloading update parts...")
-   local loaded = {}
-   for _, partName in ipairs(MANIFEST_PARTS) do
-      local partURL = UPDATE_BASE_URL .. partName
-      local content = fetchURL(partURL)
-      if not content or content == '' then
-         echoE("Failed to download " .. partName .. ". Update aborted, nothing was changed.")
-         return false
-      end
-      local chunk, err = load(content, partName)
-      if not chunk then
-         echoE("Syntax error in " .. partName .. ": " .. tostring(err) .. ". Update aborted.")
-         return false
-      end
-      loaded[partName] = {chunk = chunk, content = content}
-   end
-
-   -- All parts downloaded and parsed successfully -- now actually apply them.
-   for _, partName in ipairs(MANIFEST_PARTS) do
-      local ok, err = pcall(loaded[partName].chunk)
-      if not ok then
-         echoE("Error applying " .. partName .. ": " .. tostring(err))
-         echoE("Update partially applied -- some parts may be inconsistent. Recommend restarting the script.")
-         return false
-      end
-      cacheWrite(partName, loaded[partName].content)
-   end
-
-   echoS("Update applied: now running v" .. remoteVersion .. ". Continuing game with patched code.")
-   return true
-end
-
 function checkForUpdate()
    print("Checking version on GitHub...")
    local result = fetchURL(MANIFEST_URL)
@@ -180,13 +116,13 @@ function checkForUpdate()
    end
 
    echoW("New version available: " .. remoteVersion .. " (current: " .. SCRIPT_VERSION .. ")")
+   print("It will be applied next time you run the script.")
    local remoteChangelog = parseChangelog(result)
    if remoteChangelog then
       printChangelog(remoteChangelog, remoteVersion)
    end
-
-   applyHotPatch(remoteVersion)
 end
+
 
 
 -- Move and evaluation tables
