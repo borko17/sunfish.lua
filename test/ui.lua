@@ -687,6 +687,3 @@ function displayPosition(pos, lastMove, capturedByUser, capturedByEngine, blackM
    printboard(arrayToBoard(pos.board), lastMove, checkers, guards, isMate)
    print("Captured: " .. renderCaptured(capturedByUser, blackSymbols))
 end
-
--- Help
-
