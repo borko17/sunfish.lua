@@ -1,5 +1,3 @@
--- sunfish.lua Chess engine, Lua port chain: 1. Original algorithm: Sunfish (Python) by Thomas Ahle https://github.com/thomasahle/sunfish - BSD license 2. Initial Lua transpilation attributed to Soumith Chintala 3. Extended for Yantra Launcher / Android (Luaj-jse 3.0.1), with UI, save/load, puzzle mode, and search tuning, by borko17 (https://github.com/borko17/sunfish-lua) (with help from Claude AI).
-
 -- CONFIG has moved to loader.lua (it runs first and sets USE_UNICODE_PIECES,
 -- SHOW_ANNOTATIONS, CHALLENGE_MIN_PIECES, CHALLENGE_MAX_PIECES,
 -- CHALLENGE_GEN_ATTEMPTS, CHALLENGE_HINTS_ENABLED, NODES_SEARCHED,
@@ -31,12 +29,9 @@ function echoS(msg) binding.exec("echo -s " .. msg) end -- success
 function echoW(msg) binding.exec("echo -w " .. msg) end -- warning/heading
 
 -- Update info
--- Loader always fetches the latest version of every part on each /run, so the
--- user is always on the newest code already -- there's nothing to compare against
--- locally. 'u' here just reports the version and changelog currently published
--- in the manifest on GitHub.
-UPDATE_BASE_URL = "https://raw.githubusercontent.com/borko17/sunfish.lua/main/test/"
-MANIFEST_URL = UPDATE_BASE_URL .. "manifest.txt"
+-- loader.lua fetches manifest.txt once at startup (alongside the 7 code parts)
+-- and stores its raw text in the global MANIFEST_CONTENT. checkForUpdate() below
+-- just reads that instead of fetching it again over the network.
 
 -- Low-level GET, same java.net.URL / BufferedReader approach already proven to work
 -- from the original single-file checkForUpdate().
@@ -87,11 +82,10 @@ function printChangelog(list, versionLabel)
 end
 
 function checkForUpdate()
-   print("Checking version on GitHub...")
-   local result = fetchURL(MANIFEST_URL)
+   local result = MANIFEST_CONTENT
 
    if not result or result == '' then
-      echoE("No response from GitHub. Check your connection.")
+      echoE("Manifest not available (failed to download at startup).")
       return
    end
 
