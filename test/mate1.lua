@@ -1,3 +1,25 @@
+-- AI puzzle mode ("m1")
+
+emptyBoard =
+    '         \n' ..
+    '         \n' ..
+    ' ........\n' ..
+    ' ........\n' ..
+    ' ........\n' ..
+    ' ........\n' ..
+    ' ........\n' ..
+    ' ........\n' ..
+    ' ........\n' ..
+    ' ........\n' ..
+    '         \n' ..
+    '          '
+
+aiWhitePool = {"Q","R","B","N","P"}
+aiBlackPool = {"q","r","b","n","p"}
+aiPieceCaps = {Q = 1, R = 2, B = 2, N = 2, P = 8}
+AI_MATE1_ATTEMPTS = 600
+
+
 function pickCappedPieceType(pool, counts)
    local candidates = {}
    for _, pc in ipairs(pool) do
