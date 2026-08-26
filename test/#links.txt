@@ -6,4 +6,4 @@ https://raw.githubusercontent.com/borko17/sunfish.lua/main/test/help.lua
 https://raw.githubusercontent.com/borko17/sunfish.lua/main/test/mate1.lua
 https://raw.githubusercontent.com/borko17/sunfish.lua/main/test/challenge.lua
 https://raw.githubusercontent.com/borko17/sunfish.lua/main/test/main.lua
-https://raw.githubusercontent.com/borko17/sunfish.lua/main/test/manifest.txt
+https://raw.githubusercontent.com/borko17/sunfish.lua/main/test/manifest.lua
