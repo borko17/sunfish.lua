@@ -95,7 +95,7 @@ if usedCache then
    print("(Some parts loaded from local cache -- check your connection for the latest version.)")
 end
 
--- Execute every part in order, in this same global scope, then cache what came from network.
+-- Execute every part in order, in this same global scope.
 for _, part in ipairs(chunks) do
    local ok, err = pcall(part.chunk)
    if not ok then
@@ -105,4 +105,5 @@ for _, part in ipairs(chunks) do
    cacheWrite(part.name, part.content)
 end
 
+math.randomseed(os.time())
 main()
