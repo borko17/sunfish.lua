@@ -1,4 +1,4 @@
-9function showHelp()
+function showHelp()
    print("")
    echoW("=== CHESS.LUA HELP ===")
    print("")
