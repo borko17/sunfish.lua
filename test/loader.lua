@@ -23,7 +23,7 @@ TABLE_SIZE = NODES_SEARCHED * 25 -- scaled off NODES_SEARCHED so it doesn't thra
 
 local BASE_URL = "https://raw.githubusercontent.com/borko17/sunfish.lua/main/test/"
 local PARTS = {"core.lua", "search.lua", "ui.lua", "help.lua", "mate1.lua", "challenge.lua", "main.lua"}
-local MANIFEST_NAME = "manifest.txt" -- fetched alongside the parts below, but it's plain text (not Lua) - kept raw in MANIFEST_CONTENT for checkForUpdate() to read, not load()ed as code
+local MANIFEST_NAME = "manifest.lua" -- fetched alongside the parts below, but it's plain text (not Lua) - kept raw in MANIFEST_CONTENT for checkForUpdate() to read, not load()ed as code
 
 local function fetchURL(url)
    local ok, result = pcall(function()
