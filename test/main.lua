@@ -473,6 +473,6 @@ positionCounts[tpKey(pos)] = (positionCounts[tpKey(pos)] or 0) + 1
    end
 end
 
-math.randomseed(os.time())
-
-main()
+-- main() is called once by loader.lua after all parts are loaded (and again by
+-- applyHotPatch() in core.lua if a live 'u' patch replaces this file) -- not here,
+-- so re-applying this chunk during hot-patch doesn't start a second nested game.
