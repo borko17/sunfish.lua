@@ -35,7 +35,7 @@ function echoW(msg) binding.exec("echo -w " .. msg) end -- warning/heading
 -- user is always on the newest code already. 'u' here just reports what version
 -- is currently running and what's new upstream, in case a newer one exists on
 -- GitHub -- it takes effect the next time the script is run (/run), not live.
-SCRIPT_VERSION = "2.608251919"
+SCRIPT_VERSION = "2.608260242"
 UPDATE_BASE_URL = "https://raw.githubusercontent.com/borko17/sunfish.lua/main/test/"
 MANIFEST_URL = UPDATE_BASE_URL .. "manifest.txt"
 
