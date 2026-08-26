@@ -642,6 +642,3 @@ function challengeMode()
    end
 end
 
-
--- Main game loop
-
