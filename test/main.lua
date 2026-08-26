@@ -18,7 +18,7 @@ function main()
    local moveSnapshots = {}
 
    print("")
-   echoW("=== sunfish.lua v" .. SCRIPT_VERSION .." ===")
+   echoW("=== sunfish.lua ===")
    print("• 'h' for help")
    print("• 'q' to quit.")
 
