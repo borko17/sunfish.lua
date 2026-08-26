@@ -23,6 +23,7 @@ TABLE_SIZE = NODES_SEARCHED * 25 -- scaled off NODES_SEARCHED so it doesn't thra
 
 local BASE_URL = "https://raw.githubusercontent.com/borko17/sunfish.lua/main/test/"
 local PARTS = {"core.lua", "search.lua", "ui.lua", "help.lua", "mate1.lua", "challenge.lua", "main.lua"}
+local MANIFEST_NAME = "manifest.txt" -- fetched alongside the parts below, but it's plain text (not Lua) - kept raw in MANIFEST_CONTENT for checkForUpdate() to read, not load()ed as code
 
 local function fetchURL(url)
    local ok, result = pcall(function()
@@ -51,6 +52,14 @@ local function fetchURL(url)
 end
 
 print("Loading sunfish.lua...")
+
+-- Manifest is plain text, not Lua code: fetched once here and stashed globally
+-- so checkForUpdate() (in core.lua) can just read it instead of fetching it again.
+MANIFEST_CONTENT = fetchURL(BASE_URL .. MANIFEST_NAME)
+if not MANIFEST_CONTENT or MANIFEST_CONTENT == '' then
+   binding.exec("echo -e Failed to download " .. MANIFEST_NAME .. ". Check your connection and try again.")
+   return
+end
 
 local chunks = {}
 
