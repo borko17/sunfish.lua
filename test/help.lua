@@ -1,4 +1,4 @@
-function showHelp()
+9function showHelp()
    print("")
    echoW("=== CHESS.LUA HELP ===")
    print("")
@@ -229,25 +229,4 @@ function showAbout()
    print("")
    echoW("↑↑↑ ABOUT SUNFISH.LUA ↑↑↑")
 end
-
--- AI puzzle mode ("m1")
-
-emptyBoard =
-    '         \n' ..
-    '         \n' ..
-    ' ........\n' ..
-    ' ........\n' ..
-    ' ........\n' ..
-    ' ........\n' ..
-    ' ........\n' ..
-    ' ........\n' ..
-    ' ........\n' ..
-    ' ........\n' ..
-    '         \n' ..
-    '          '
-
-aiWhitePool = {"Q","R","B","N","P"}
-aiBlackPool = {"q","r","b","n","p"}
-aiPieceCaps = {Q = 1, R = 2, B = 2, N = 2, P = 8}
-AI_MATE1_ATTEMPTS = 600
 
