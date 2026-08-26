@@ -21,7 +21,7 @@ TABLE_SIZE = NODES_SEARCHED * 25 -- scaled off NODES_SEARCHED so it doesn't thra
 -- the manifest and reports the version/changelog -- any newer version takes
 -- effect the next time you run this loader, not live during the current game.
 
-local BASE_URL = "https://raw.githubusercontent.com/borko17/sunfish.lua/main/test/"
+local BASE_URL = "https://raw.githubusercontent.com/borko17/sunfish.lua/main/modular/"
 local PARTS = {"core.lua", "search.lua", "ui.lua", "help.lua", "mate1.lua", "challenge.lua", "main.lua"}
 
 local function fetchURL(url)
