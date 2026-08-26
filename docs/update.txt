@@ -1,4 +1,6 @@
-SCRIPT_VERSION = "2.608211301"
+SCRIPT_VERSION = "2.608260320"
 CHANGELOG = {
-   "Search progress output (depth N, nodes/Nk nodes) now prints after each completed depth in the iterative deepening loop instead of only at the end.",
+      "Added Challenge Game ('cg'): random position (10-20 pieces), play until mate/draw/quit",
+   "Toggleable move hints in Challenge Game (press 'th')",
+   "Separate, weaker node budget for Sunfish's replies in Challenge Game",
 }
