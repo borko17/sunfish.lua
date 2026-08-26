@@ -1,17 +1,16 @@
 -- sunfish.lua bootstrap loader
 -- This is the ONLY file you paste into Yantra's `scripts` editor.
--- It downloads core.lua, search.lua, ui.lua, help.lua, mate1.lua,
--- challenge.lua, main.lua (in that order) from GitHub, load()s each
--- one into this same script's global scope, then runs main().
+-- Every /run downloads the LATEST core.lua, search.lua, ui.lua, help.lua,
+-- mate1.lua, challenge.lua, main.lua from GitHub (in that order), load()s
+-- each one into this same script's global scope, then runs main().
 --
--- Everything after this point (fetchURL, checkForUpdate, applyHotPatch,
--- MANIFEST_PARTS, etc.) is defined inside core.lua and becomes available
--- globally once core.lua loads below -- that's how the in-game 'u' command
--- is able to re-fetch and hot-patch all 7 parts later without a restart.
+-- Because every run always fetches fresh code, you are always on the latest
+-- version already. The in-game 'u' command (defined in core.lua) just checks
+-- the manifest and reports the version/changelog -- any newer version takes
+-- effect the next time you run this loader, not live during the current game.
 
 local BASE_URL = "https://raw.githubusercontent.com/borko17/sunfish.lua/main/test/"
 local PARTS = {"core.lua", "search.lua", "ui.lua", "help.lua", "mate1.lua", "challenge.lua", "main.lua"}
-local CACHE_PREFIX = "sunfish_cache_"
 
 local function fetchURL(url)
    local ok, result = pcall(function()
@@ -39,47 +38,15 @@ local function fetchURL(url)
    return nil
 end
 
--- Best-effort local cache read, used only if the network fetch below fails
--- (e.g. no connection on startup). Silently returns nil if io.open isn't
--- available in this Luaj/Yantra sandbox.
-local function cacheRead(name)
-   local ok, content = pcall(function()
-      local f = io.open(CACHE_PREFIX .. name, "r")
-      if not f then error("no io") end
-      local c = f:read("*a")
-      f:close()
-      return c
-   end)
-   if ok then return content end
-   return nil
-end
-
-local function cacheWrite(name, content)
-   pcall(function()
-      local f = io.open(CACHE_PREFIX .. name, "w")
-      if not f then error("no io") end
-      f:write(content)
-      f:close()
-   end)
-end
-
 print("Loading sunfish.lua...")
 
 local chunks = {}
-local usedCache = false
 
 for _, partName in ipairs(PARTS) do
    local content = fetchURL(BASE_URL .. partName)
-   if not content or content == '' then
-      -- Network failed for this part -- fall back to local cache if we have one.
-      content = cacheRead(partName)
-      if content then
-         usedCache = true
-      end
-   end
 
    if not content or content == '' then
-      binding.exec("echo -e Failed to load " .. partName .. " (no network and no local cache). Cannot start.")
+      binding.exec("echo -e Failed to download " .. partName .. ". Check your connection and try again.")
       return
    end
 
@@ -88,11 +55,7 @@ for _, partName in ipairs(PARTS) do
       binding.exec("echo -e Syntax error in " .. partName .. ": " .. tostring(err))
       return
    end
-   chunks[#chunks + 1] = {name = partName, chunk = chunk, content = content}
-end
-
-if usedCache then
-   print("(Some parts loaded from local cache -- check your connection for the latest version.)")
+   chunks[#chunks + 1] = {name = partName, chunk = chunk}
 end
 
 -- Execute every part in order, in this same global scope.
@@ -102,7 +65,6 @@ for _, part in ipairs(chunks) do
       binding.exec("echo -e Error running " .. part.name .. ": " .. tostring(err))
       return
    end
-   cacheWrite(part.name, part.content)
 end
 
 math.randomseed(os.time())
