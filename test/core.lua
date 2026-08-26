@@ -3,6 +3,53 @@
 -- CHALLENGE_GEN_ATTEMPTS, CHALLENGE_HINTS_ENABLED, NODES_SEARCHED,
 -- CHALLENGE_ENGINE_NODES, and TABLE_SIZE as globals before any part below runs).
 
+IS_YANTRA = (type(luajava) == "table") and (type(binding) == "table")
+
+if IS_YANTRA then
+    function echoE(msg) binding.exec("echo -e " .. msg) end
+    function echoS(msg) binding.exec("echo -s " .. msg) end
+    function echoW(msg) binding.exec("echo -w " .. msg) end
+
+    function fetchURL(url)
+        local ok, result = pcall(function()
+            local URL = luajava.bindClass("java.net.URL")
+            local u = URL.new(url)
+            local conn = u:openConnection()
+            conn:setConnectTimeout(8000)
+            conn:setReadTimeout(8000)
+            conn:setRequestMethod("GET")
+            local BufferedReader = luajava.bindClass("java.io.BufferedReader")
+            local InputStreamReader = luajava.bindClass("java.io.InputStreamReader")
+            local reader = BufferedReader.new(InputStreamReader.new(conn:getInputStream()))
+            local sb = {}
+            local line = reader:readLine()
+            while line ~= nil do
+                table.insert(sb, line)
+                line = reader:readLine()
+            end
+            reader:close()
+            return table.concat(sb, "\n")
+        end)
+        if ok then return result end
+        return nil
+    end
+else
+    -- standalone Lua 5.4: obojen ispis preko ANSI escape kodova u terminalu
+    function echoE(msg) print("\27[31m" .. msg .. "\27[0m") end -- crveno
+    function echoS(msg) print("\27[32m" .. msg .. "\27[0m") end -- zeleno
+    function echoW(msg) print("\27[33m" .. msg .. "\27[0m") end -- žuto
+
+    -- fetchURL preko curl (dostupan u Termux/Linux); vraća nil ako nema mreže/curl
+    function fetchURL(url)
+        local handle = io.popen('curl -fsSL --max-time 8 "' .. url .. '" 2>/dev/null')
+        if not handle then return nil end
+        local result = handle:read("*a")
+        handle:close()
+        if not result or result == "" then return nil end
+        return result
+    end
+end
+
 MATE_VALUE = 30000 -- exceeds 8*queen+2*(rook+knight+bishop); king value is double this
 MATE_UPPER = 60000 + (10 * 2529) -- search() scores mate near this, not MATE_VALUE - callers must match
 
