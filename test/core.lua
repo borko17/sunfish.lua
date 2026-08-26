@@ -2,28 +2,7 @@
 -- SHOW_ANNOTATIONS, CHALLENGE_MIN_PIECES, CHALLENGE_MAX_PIECES,
 -- CHALLENGE_GEN_ATTEMPTS, CHALLENGE_HINTS_ENABLED, NODES_SEARCHED,
 -- CHALLENGE_ENGINE_NODES, and TABLE_SIZE as globals before any part below runs).
-
-IS_YANTRA = (type(luajava) == "table") and (type(binding) == "table")
-
-IS_YANTRA = (type(luajava) == "table") and (type(binding) == "table")
-
-if IS_YANTRA then
-    function echoE(msg) binding.exec("echo -e " .. msg) end
-    function echoS(msg) binding.exec("echo -s " .. msg) end
-    function echoW(msg) binding.exec("echo -w " .. msg) end
-    -- input() već postoji globalno u Yantri, ništa ne diraj
-else
-    function echoE(msg) print("\27[31m" .. msg .. "\27[0m") end
-    function echoS(msg) print("\27[32m" .. msg .. "\27[0m") end
-    function echoW(msg) print("\27[33m" .. msg .. "\27[0m") end
-
-    function input(prompt)
-        if prompt then io.write(prompt) end
-        io.flush()
-        return io.read("l")
-    end
-end
-
+ 
     function fetchURL(url)
         local ok, result = pcall(function()
             local URL = luajava.bindClass("java.net.URL")
