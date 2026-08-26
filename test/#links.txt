@@ -1,9 +1,0 @@
-https://raw.githubusercontent.com/borko17/sunfish.lua/main/test/loader.lua
-https://raw.githubusercontent.com/borko17/sunfish.lua/main/test/core.lua
-https://raw.githubusercontent.com/borko17/sunfish.lua/main/test/search.lua
-https://raw.githubusercontent.com/borko17/sunfish.lua/main/test/ui.lua
-https://raw.githubusercontent.com/borko17/sunfish.lua/main/test/help.lua
-https://raw.githubusercontent.com/borko17/sunfish.lua/main/test/mate1.lua
-https://raw.githubusercontent.com/borko17/sunfish.lua/main/test/challenge.lua
-https://raw.githubusercontent.com/borko17/sunfish.lua/main/test/main.lua
-https://raw.githubusercontent.com/borko17/sunfish.lua/main/test/manifest.lua
