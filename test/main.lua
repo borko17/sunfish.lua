@@ -1,4 +1,4 @@
-function main()
+9function main()
    local pos = Position.new(initial, 0, {true,true}, {true,true}, 0, 0)
 -- Board this game started from (standard, unless a custom/puzzle position is loaded via 'l' before any moves). Saved with the game code so rebuildHistoryFromMoves() replays from the real start instead of always assuming `initial`.
    local startingBoard = initial
@@ -472,7 +472,3 @@ positionCounts[tpKey(pos)] = (positionCounts[tpKey(pos)] or 0) + 1
    end
    end
 end
-
--- main() is called once by loader.lua after all parts are loaded (and again by
--- applyHotPatch() in core.lua if a live 'u' patch replaces this file) -- not here,
--- so re-applying this chunk during hot-patch doesn't start a second nested game.
