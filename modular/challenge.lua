@@ -1,3 +1,5 @@
+-- challenge.lua ======= 
+
 function withQuietExec(fn)
    local realExec = binding.exec
    binding.exec = function(_) end
@@ -731,3 +733,4 @@ function challengeMode()
    end
 end
 
+-- challenge.lua ======= end
