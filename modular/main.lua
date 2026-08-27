@@ -1,4 +1,5 @@
---
+-- main.lua ======= 
+
 function main()
    local pos = Position.new(initial, 0, {true,true}, {true,true}, 0, 0)
 -- Board this game started from (standard, unless a custom/puzzle position is loaded via 'l' before any moves). Saved with the game code so rebuildHistoryFromMoves() replays from the real start instead of always assuming `initial`.
@@ -504,3 +505,5 @@ positionCounts[tpKey(pos)] = (positionCounts[tpKey(pos)] or 0) + 1
    end
    end
 end
+
+-- main.lua ======= end
