@@ -1,3 +1,5 @@
+-- ui.lua =======
+
 function updateDisplayMode()
    whiteSymbols = USE_UNICODE_PIECES and whiteSymbols_unicode or whiteSymbols_letters
    blackSymbols = USE_UNICODE_PIECES and blackSymbols_unicode or blackSymbols_letters
@@ -688,5 +690,5 @@ function displayPosition(pos, lastMove, capturedByUser, capturedByEngine, blackM
    print("Captured: " .. renderCaptured(capturedByUser, blackSymbols))
 end
 
--- Help
+-- ui.lua ======= end
 
