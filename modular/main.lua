@@ -1,4 +1,5 @@
 --
+--
 function main()
    local pos = Position.new(initial, 0, {true,true}, {true,true}, 0, 0)
 -- Board this game started from (standard, unless a custom/puzzle position is loaded via 'l' before any moves). Saved with the game code so rebuildHistoryFromMoves() replays from the real start instead of always assuming `initial`.
@@ -16,7 +17,21 @@ function main()
 -- Full move history, one entry per ply: {notation, by}. Used by 'm' (move list) and 's<N>' (save as of move N).
    local moveHistory = {}
 -- Snapshot of full state after each of your moves, keyed by move number; lets 's<N>' save as of move N even after playing further.
-   local moveSnapshots = {}
+-- Index 0 is the starting position (before any moves), so 's0' can save it too. next="w" since it's the player's turn there.
+   local moveSnapshots = {
+      [0] = {
+         pos = pos,
+         lastMove = nil,
+         capturedByUser = {},
+         capturedByEngine = {},
+         whiteMoves = 0,
+         blackMoves = 0,
+         halfmoveClock = 0,
+         moveHistory = {},
+         startingBoard = startingBoard,
+         nextToMove = "w",
+      }
+   }
 
    print("")
    echoW("=== sunfish.lua ===")
@@ -96,7 +111,7 @@ while true do
          print("")
       else
          local code = saveGame(snap.pos, snap.lastMove, snap.capturedByUser, snap.capturedByEngine,
-                                snap.whiteMoves, snap.blackMoves, snap.halfmoveClock, "b", snap.moveHistory, snap.startingBoard)
+                                snap.whiteMoves, snap.blackMoves, snap.halfmoveClock, snap.nextToMove or "b", snap.moveHistory, snap.startingBoard)
         print("----")
          echoW("=== GAME CODE (as of move " .. n .. ") ===")
          print(code)
@@ -170,6 +185,20 @@ while true do
             end
          end
 
+-- s0 after a load = the position exactly as loaded, before any further moves.
+         moveSnapshots[0] = {
+            pos = pos,
+            lastMove = lastMove,
+            capturedByUser = {table.unpack(capturedByUser)},
+            capturedByEngine = {table.unpack(capturedByEngine)},
+            whiteMoves = whiteMoves,
+            blackMoves = blackMoves,
+            halfmoveClock = halfmoveClock,
+            moveHistory = {table.unpack(moveHistory)},
+            startingBoard = startingBoard,
+            nextToMove = nextToMove,
+         }
+
          local code = saveGame(pos, lastMove, capturedByUser, capturedByEngine, whiteMoves, blackMoves, halfmoveClock, "w", moveHistory, startingBoard)
       echoW("=== GAME CODE ===")
       print(code)
@@ -178,8 +207,9 @@ while true do
          print("")
 
          if nextToMove == "b" then
--- Sunfish's turn: show the saved lastMove, then play its reply as it would in a live game.
+-- Sunfish's turn: show the saved lastMove (this is the position as saved - YOUR move, before Sunfish replies), then play its reply as it would in a live game.
             if lastMove then
+   echoW("Loaded position (after your move):")
    print("Your move: \n" .. render(lastMove[1]) .. render(lastMove[2]))
    print("Captured: " .. renderCaptured(capturedByUser, blackSymbols))
                local checkersAfterYourMove = findCheckers(pos)
@@ -256,6 +286,7 @@ print("Captured: " .. renderCaptured(capturedByUser, blackSymbols))
       else
          echoE("Invalid code. Game continues.")
          print("")
+         displayPosition(pos, lastMove, capturedByUser, capturedByEngine, blackMoves)
       end
    end
    elseif crdn == 'r' then
@@ -350,6 +381,7 @@ positionCounts[tpKey(pos)] = (positionCounts[tpKey(pos)] or 0) + 1
          halfmoveClock = halfmoveClock,
          moveHistory = {table.unpack(moveHistory)},
          startingBoard = startingBoard,
+         nextToMove = "b",
       }
 
       local checkersAfterUser = findCheckers(pos)
