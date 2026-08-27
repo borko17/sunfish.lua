@@ -429,7 +429,7 @@ function playChallengeGame(board, startPos, startLastMove, startCapturedByUser,
                      nextToMove = nextToMove,
                   }
 
-                  local reloadCode = saveGame(pos, lastMove, capturedByUser, capturedByEngine, whiteMoves, blackMoves, halfmoveClock, "w", moveHistory, board,
+                  local reloadCode = saveGame(pos, lastMove, capturedByUser, capturedByEngine, whiteMoves, blackMoves, halfmoveClock, nextToMove, moveHistory, board,
                                                {mode = "abc", hints = (hintsOn and "1" or "0")})
                   echoW("=== GAME CODE ===")
                   print(reloadCode)
