@@ -2496,7 +2496,7 @@ end
 -- Challenge mode ("abc") - "Challenge Game": mate-in-N-moves puzzle vs Sunfish, with optional on-board hint
 
 -- Silences binding.exec() for duration of fn() - suppresses "(depth X, Nk nodes)" spam when search() runs in the background for a hint
-function withQuietExec(fn)
+local function withQuietExec(fn)
    local realExec = binding.exec
    binding.exec = function(_) end
    local ok, a, b, c, d, e = pcall(fn)
@@ -2506,13 +2506,13 @@ function withQuietExec(fn)
 end
 
 -- Best move for the side to move in `pos` (player/White in challenge mode), shown as an on-board hint; same node budget as Sunfish's own move. search() only treats a position as a repetition draw at deeper plies, never for the root move, so it can keep suggesting a back-and-forth into a seen position - if the top suggestion would revisit `history`, fall back to the best legal alternative that doesn't. avoidMove (player's own move from two of their own plies ago, e.g. an undone d4d3) is also excluded when a non-repeating alternative exists, to stop the hint nudging a stalling shuffle.
-HINT_NODES_BEST = nil       -- nil = reuse NODES_SEARCHED
+local HINT_NODES_BEST = nil       -- nil = reuse NODES_SEARCHED
 
-function movesEqual(a, b)
+local function movesEqual(a, b)
    return a and b and a[1] == b[1] and a[2] == b[2] and a[3] == b[3]
 end
 
-function findHintMove(pos, history, avoidMove)
+local function findHintMove(pos, history, avoidMove)
    local legal = legalMovesOf(pos)
    if #legal == 0 then return nil end
 
@@ -2553,7 +2553,7 @@ function findHintMove(pos, history, avoidMove)
 end
 
 -- Converts the candidate move into a hints table for printboard(), keyed by absolute index; from and to squares get wrapped in single quotes.
-function buildHintDisplay(move)
+local function buildHintDisplay(move)
    local hints = {}
    if move then
       hints[move[1]] = {quote = "'"}
@@ -2563,10 +2563,10 @@ function buildHintDisplay(move)
 end
 
 -- How many EXTRA pieces White gets over Black when generating a Challenge position (on top of the ~55-70% split). 0 = no extra bonus.
-CHALLENGE_WHITE_EXTRA_PIECES = 2
+local CHALLENGE_WHITE_EXTRA_PIECES = 2
 
 -- Random "legal-looking" position: both kings + a spread of extra pieces (White gets a material edge for a realistic mate within the move budget). Unlike genAiMateIn1(), no immediate forced mate is required.
-function genChallengePosition()
+local function genChallengePosition()
    for _ = 1, CHALLENGE_GEN_ATTEMPTS do
       local bkFile, bkRank = math.random(0,7), math.random(0,7)
       local bkIdx = A1 + bkFile - 10*bkRank
@@ -2659,7 +2659,7 @@ function genChallengePosition()
 end
 
 -- Runs one full challenge game on the given board: player is White. Returns "won", "quit", or "newgame" (player asked to regenerate a fresh position without finishing this one). Ends only via checkmate, draw, or the player leaving/resigning - no move limit.
-function playChallengeGame(board, startPos, startLastMove, startCapturedByUser,
+local function playChallengeGame(board, startPos, startLastMove, startCapturedByUser,
                                   startCapturedByEngine, startWhiteMoves, startHalfmoveClock,
                                   startGameHistory, startPositionCounts, startMoveHistory, startBlackMoves)
    local pos = startPos or Position.new(board, 0, {false,false}, {false,false}, 0, 0)
@@ -3201,7 +3201,7 @@ function playChallengeGame(board, startPos, startLastMove, startCapturedByUser,
    end
 end
 
-function challengeMode()
+local function challengeMode()
    print("")
    echoW("=== CHALLENGE GAME ===")
    print("• 'th' - toggle hints")
@@ -3457,7 +3457,7 @@ while true do
             local rotated = pos:rotate()
             print("")
             echoW("🐠 Sunfish is thinking...")
-enginemove, score, reachedDepth, usedNodes, elapsed = search(pos, NODES_SEARCHED, gameHistory)
+local enginemove, score, reachedDepth, usedNodes, elapsed = search(pos, NODES_SEARCHED, gameHistory)
 assert(score)
             if enginemove and not isLegalMove(rotated, enginemove) then
                enginemove = nil
@@ -3620,11 +3620,11 @@ positionCounts[tpKey(pos)] = (positionCounts[tpKey(pos)] or 0) + 1
       }
 
       local checkersAfterUser = findCheckers(pos)
-guardsAfterUser = findKingGuards(pos, checkersAfterUser)
-engineHasMove = hasLegalMove(pos)
-isMateNow = next(checkersAfterUser) ~= nil and not engineHasMove
-displayCheckers = {}
-displayGuards = {}
+local guardsAfterUser = findKingGuards(pos, checkersAfterUser)
+local engineHasMove = hasLegalMove(pos)
+local isMateNow = next(checkersAfterUser) ~= nil and not engineHasMove
+local displayCheckers = {}
+local displayGuards = {}
 for idx in pairs(checkersAfterUser) do
    displayCheckers[119 - idx] = true
 end
@@ -3660,7 +3660,7 @@ end
          break
       end
       echoW("🐠 Sunfish is thinking...")
-enginemove, score, reachedDepth, usedNodes, elapsed = search(pos, NODES_SEARCHED, gameHistory)
+local enginemove, score, reachedDepth, usedNodes, elapsed = search(pos, NODES_SEARCHED, gameHistory)
 assert(score)
       if score <= -MATE_UPPER then
          echoS("Checkmate in " .. whiteMoves .. " moves for White!")
