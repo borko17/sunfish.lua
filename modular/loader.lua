@@ -90,5 +90,84 @@ for _, part in ipairs(chunks) do
    end
 end
 
+-- Console output helpers (wrap binding.exec("echo -X " .. msg) calls for readability)
+function echoE(msg) binding.exec("echo -e " .. msg) end -- error
+function echoS(msg) binding.exec("echo -s " .. msg) end -- success
+function echoW(msg) binding.exec("echo -w " .. msg) end -- warning/heading
+
+-- Update info
+-- loader.lua fetches manifest.txt once at startup (alongside the 7 code parts)
+-- and stores its raw text in the global MANIFEST_CONTENT. checkForUpdate() below
+-- just reads that instead of fetching it again over the network.
+
+-- Low-level GET, same java.net.URL / BufferedReader approach already proven to work
+-- from the original single-file checkForUpdate().
+function fetchURL(url)
+   local ok, result = pcall(function()
+      local URL = luajava.bindClass("java.net.URL")
+      local u = URL.new(url)
+      local conn = u:openConnection()
+      conn:setConnectTimeout(8000)
+      conn:setReadTimeout(8000)
+      conn:setRequestMethod("GET")
+
+      local BufferedReader = luajava.bindClass("java.io.BufferedReader")
+      local InputStreamReader = luajava.bindClass("java.io.InputStreamReader")
+      local reader = BufferedReader.new(InputStreamReader.new(conn:getInputStream()))
+
+      local sb = {}
+      local line = reader:readLine()
+      while line ~= nil do
+         table.insert(sb, line)
+         line = reader:readLine()
+      end
+      reader:close()
+      return table.concat(sb, "\n")
+   end)
+   if ok then return result end
+   return nil
+end
+
+-- Extracts CHANGELOG table from raw manifest text (list of quoted strings inside CHANGELOG = { ... })
+function parseChangelog(text)
+   local body = text:match('CHANGELOG%s*=%s*{(.-)}')
+   if not body then return nil end
+   local list = {}
+   for entry in body:gmatch('"(.-)"') do
+      table.insert(list, entry)
+   end
+   if #list == 0 then return nil end
+   return list
+end
+
+function printChangelog(list, versionLabel)
+   print("")
+   print("What's new in v" .. versionLabel .. ":")
+   for _, line in ipairs(list) do
+      print("• " .. line)
+   end
+end
+
+function checkForUpdate()
+   local result = MANIFEST_CONTENT
+
+   if not result or result == '' then
+      echoE("Manifest not available (failed to download at startup).")
+      return
+   end
+
+   local remoteVersion = result:match('SCRIPT_VERSION%s*=%s*"([%d%.]+)"')
+   if not remoteVersion then
+      echoE("Could not find a version number in the manifest.")
+      return
+   end
+
+   echoS("Running version: " .. remoteVersion)
+   local remoteChangelog = parseChangelog(result)
+   if remoteChangelog then
+      printChangelog(remoteChangelog, remoteVersion)
+   end
+end
+
 math.randomseed(os.time())
 main()
