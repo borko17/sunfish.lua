@@ -198,7 +198,7 @@ while true do
             nextToMove = nextToMove,
          }
 
-         local code = saveGame(pos, lastMove, capturedByUser, capturedByEngine, whiteMoves, blackMoves, halfmoveClock, "w", moveHistory, startingBoard)
+         local code = saveGame(pos, lastMove, capturedByUser, capturedByEngine, whiteMoves, blackMoves, halfmoveClock, nextToMove, moveHistory, startingBoard)
       echoW("=== GAME CODE ===")
       print(code)
       echoW("================")
