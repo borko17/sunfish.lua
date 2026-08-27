@@ -1,6 +1,8 @@
-SCRIPT_VERSION = "2.608260320"
+SCRIPT_VERSION = "2.608270635"
 CHANGELOG = {
-      "Added Challenge Game ('cg'): random position (10-20 pieces), play until mate/draw/quit",
-   "Toggleable move hints in Challenge Game (press 'th')",
-   "Separate, weaker node budget for Sunfish's replies in Challenge Game",
+   "Fixed: the GAME CODE re-printed right after loading a code now keeps the correct next:b/next:w instead of always showing next:w (this was breaking sN reloads in Challenge Game)",
+   "Fixed: board no longer missing after 'Invalid code' message",
+   "Fixed: 's0' now works in both normal game and Challenge Game (saves the starting position)",
+   "Fixed: Challenge Game now auto-plays Sunfish's reply after loading a code where it's Sunfish's turn",
+   "sN save codes now correctly record whose turn it is (fixes confusion around whose move sN saves)",
 }
