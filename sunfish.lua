@@ -16,22 +16,6 @@ local TABLE_SIZE = NODES_SEARCHED * 25 -- scaled off NODES_SEARCHED so it doesn'
 local MATE_VALUE = 30000 -- exceeds 8*queen+2*(rook+knight+bishop); king value is double this
 local MATE_UPPER = 60000 + (10 * 2529) -- search() scores mate near this, not MATE_VALUE - callers must match
 
-local A1, H1, A8, H8 = 91, 98, 21, 28 -- board is a 120-char padded string for cheap off-board checks
-local initial =
-    '         \n' .. --   0 -  9
-    '         \n' .. --  10 - 19
-    ' rnbqkbnr\n' .. --  20 - 29
-    ' pppppppp\n' .. --  30 - 39
-    ' ........\n' .. --  40 - 49
-    ' ........\n' .. --  50 - 59
-    ' ........\n' .. --  60 - 69
-    ' ........\n' .. --  70 - 79
-    ' PPPPPPPP\n' .. --  80 - 89
-    ' RNBQKBNR\n' .. --  90 - 99
-    '         \n' .. -- 100 -109
-    '          '     -- 110 -119
-
-local __1 = 1 -- 1-index correction
 
 -- Console output helpers (wrap binding.exec("echo -X " .. msg) calls for readability)
 local function echoE(msg) binding.exec("echo -e " .. msg) end -- error
@@ -127,10 +111,28 @@ local function checkForUpdate()
    end
 end
 
+-- core.lua ======= 
+
+A1, H1, A8, H8 = 91, 98, 21, 28 -- board is a 120-char padded string for cheap off-board checks
+initial =
+    '         \n' .. --   0 -  9
+    '         \n' .. --  10 - 19
+    ' rnbqkbnr\n' .. --  20 - 29
+    ' pppppppp\n' .. --  30 - 39
+    ' ........\n' .. --  40 - 49
+    ' ........\n' .. --  50 - 59
+    ' ........\n' .. --  60 - 69
+    ' ........\n' .. --  70 - 79
+    ' PPPPPPPP\n' .. --  80 - 89
+    ' RNBQKBNR\n' .. --  90 - 99
+    '         \n' .. -- 100 -109
+    '          '     -- 110 -119
+
+__1 = 1 -- 1-index correction
 
 -- Move and evaluation tables
-local N, E, S, W = -10, 1, 10, -1
-local directions = {
+N, E, S, W = -10, 1, 10, -1
+directions = {
     P = {N, 2*N, N+W, N+E},
     N = {2*N+E, N+2*E, S+2*E, 2*S+E, 2*S+W, S+2*W, N+2*W, 2*N+W},
     B = {N+E, S+E, S+W, N+W},
@@ -139,9 +141,9 @@ local directions = {
     K = {N, E, S, W, N+E, S+E, S+W, N+W}
 }
 
-local PROMOTION_PIECES = {"N", "B", "R", "Q"} -- hoisted out of genMoves_impl to avoid re-allocating per pawn
+PROMOTION_PIECES = {"N", "B", "R", "Q"} -- hoisted out of genMoves_impl to avoid re-allocating per pawn
 
-local pst = {
+pst = {
     P = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
         0, 198, 198, 198, 198, 198, 198, 198, 198, 0,
@@ -218,7 +220,7 @@ local pst = {
 }
 
 -- Endgame "mop-up" king table: rewards centralization so won K+R/Q vs K converges instead of hitting the 50-move limit
-local pst_K_endgame = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+pst_K_endgame = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 59930, 59940, 59950, 59960, 59960, 59950, 59940, 59930, 0,
     0, 59940, 59950, 59960, 59970, 59970, 59960, 59950, 59940, 0,
@@ -231,10 +233,10 @@ local pst_K_endgame = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 
-local pst_K_midgame = pst.K
+pst_K_midgame = pst.K
 
 -- Chess logic
-local function isspace(s)
+function isspace(s)
    if s == ' ' or s == '\n' then
       return true
    else
@@ -242,20 +244,20 @@ local function isspace(s)
    end
 end
 
-local special = '. \n'
+special = '. \n'
 
-local function isupper(s)
+function isupper(s)
    if special:find(s) then return false end
    return s:upper() == s
 end
 
-local function islower(s)
+function islower(s)
    if special:find(s) then return false end
    return s:lower() == s
 end
 
 -- Board representation: internally a Lua array (board[i] = byte at square i, 1-indexed), not a 120-char string - table index/write instead of string:sub()/rebuild. boardToArray() converts a string board on entry; arrayToBoard() converts back when printboard/save/UI need the string form.
-local function boardToArray(str)
+function boardToArray(str)
    local arr = {}
    for i = 1, #str do
       arr[i] = string.byte(str, i)
@@ -263,7 +265,7 @@ local function boardToArray(str)
    return arr
 end
 
-local function arrayToBoard(arr)
+function arrayToBoard(arr)
    local chars = {}
    for i = 1, #arr do
       chars[i] = string.char(arr[i])
@@ -272,7 +274,7 @@ local function arrayToBoard(arr)
 end
 
 -- metatable (__index) instead of per-instance methods: cheaper since search() creates thousands of Positions
-local Position = {}
+Position = {}
 Position.__index = Position
 
 -- board: string (converted to array here) or already an array (fast path from move_impl/rotate)
@@ -597,7 +599,7 @@ function Position:kingCapture()
 end
 
 -- Insufficient material -> immediate draw. Covers K vs K, K+B/N vs K (either side); any P/R/Q is always sufficient; K+2N vs K also treated as insufficient (common engine convention).
-local function hasInsufficientMaterial(board)
+function hasInsufficientMaterial(board)
    local whiteMinor, blackMinor = 0, 0
 
    for i = 1, #board do
@@ -625,16 +627,16 @@ local function hasInsufficientMaterial(board)
    return false
 end
 
-local tp = {}
+tp = {}
 -- Ring buffer of hashes sized to TABLE_SIZE; tp_head is the next write slot, evicting the oldest entry in O(1) when full.
-local tp_index = {}
-local tp_count = 0
-local tp_head = 1        -- next slot to write (1-indexed)
-local tp_capacity = 0    -- slots currently allocated in tp_index
+tp_index = {}
+tp_count = 0
+tp_head = 1        -- next slot to write (1-indexed)
+tp_capacity = 0    -- slots currently allocated in tp_index
 
-local tp_popitem -- forward-declared, used by tp_set() before its definition below
+tp_popitem = nil -- forward-declared, used by tp_set() before its definition below
 
-local function tpKey(pos)
+function tpKey(pos)
    if pos.key then
       return pos.key
    end
@@ -657,7 +659,7 @@ local function tpKey(pos)
    return key
 end
 
-local function tp_set_impl(pos, depth, canNull, lower, upper, move)
+function tp_set_impl(pos, depth, canNull, lower, upper, move)
    local hash = tpKey(pos)
 
    local entry = tp[hash]
@@ -704,7 +706,7 @@ local function tp_set_impl(pos, depth, canNull, lower, upper, move)
 end
 
 
-local function tp_get_impl(pos, depth, canNull)
+function tp_get_impl(pos, depth, canNull)
    local hash = tpKey(pos)
    local entry = tp[hash]
 
@@ -729,14 +731,14 @@ PROFILE_tp_calls = 0
 PROFILE_tpKey_time = 0
 PROFILE_tpKey_calls = 0
 
-local function tp_set(pos, depth, canNull, lower, upper, move)
+function tp_set(pos, depth, canNull, lower, upper, move)
    local t0 = os.clock()
    tp_set_impl(pos, depth, canNull, lower, upper, move)
    PROFILE_tp_time = PROFILE_tp_time + (os.clock() - t0)
    PROFILE_tp_calls = PROFILE_tp_calls + 1
 end
 
-local function tp_get(pos, depth, canNull)
+function tp_get(pos, depth, canNull)
    local t0 = os.clock()
    local a, b, c = tp_get_impl(pos, depth, canNull)
    PROFILE_tp_time = PROFILE_tp_time + (os.clock() - t0)
@@ -749,7 +751,7 @@ tp_popitem = function(protectedHash)
 end
 
 -- Null-move pruning: true if any rook/bishop/knight/queen (either color) remains. Single pass, stops at first hit.
-local function hasMajorOrMinorPiece(board)
+function hasMajorOrMinorPiece(board)
    for idx = 1, #board do
       local b = board[idx]
       -- R=82 r=114 B=66 b=98 N=78 n=110 Q=81 q=113
@@ -761,7 +763,7 @@ local function hasMajorOrMinorPiece(board)
    return false
 end
 
-local function findCheckers(p)
+function findCheckers(p)
    local kingIdx = nil
    local board = p.board
    for i = 1 - __1, #board - __1 do
@@ -784,13 +786,17 @@ local function findCheckers(p)
 end
 
 -- Search logic
-local nodes = 0 -- module-scoped: shared by search()'s loop and the inner bound() closure
+nodes = 0 -- module-scoped: shared by search()'s loop and the inner bound() closure
 
 -- Quiescence value floor: deeper nodes admit slightly weaker captures/threats before cutting off
-local QS = 40
-local QS_A = 140
+QS = 40
+QS_A = 140
 
-local function search(pos, maxn, history)
+-- core.lua ======= end
+
+-- search.lua =======
+
+function search(pos, maxn, history)
    maxn = maxn or NODES_SEARCHED
    history = history or {}
 
@@ -1136,36 +1142,40 @@ end
 
 -- Display symbols
 
-local emptySquareSymbols_unicode = {
+emptySquareSymbols_unicode = {
    dark = '\xe2\x80\xa2',
    light = '\xe2\x97\xa6'
 }
-local emptySquareSymbols_letters = {
+emptySquareSymbols_letters = {
    dark = ':',
    light = '.'
 }
 
-local whiteSymbols_unicode = {
+whiteSymbols_unicode = {
    K = '\xe2\x99\x9a', Q = '\xe2\x99\x9b', R = '\xe2\x99\x9c',
    B = '\xe2\x99\x9d', N = '\xe2\x99\x9e', P = '\xe2\x99\x9f',
 }
-local blackSymbols_unicode = {
+blackSymbols_unicode = {
    K = '\xe2\x99\x94', Q = '\xe2\x99\x95', R = '\xe2\x99\x96',
    B = '\xe2\x99\x97', N = '\xe2\x99\x98', P = '\xe2\x99\x99',
 }
 
-local whiteSymbols_letters = {
+whiteSymbols_letters = {
    K = 'K', Q = 'Q', R = 'R', B = 'B', N = 'N', P = 'P',
 }
-local blackSymbols_letters = {
+blackSymbols_letters = {
    K = 'k', Q = 'q', R = 'r', B = 'b', N = 'n', P = 'p',
 }
 
-local whiteSymbols = USE_UNICODE_PIECES and whiteSymbols_unicode or whiteSymbols_letters
-local blackSymbols = USE_UNICODE_PIECES and blackSymbols_unicode or blackSymbols_letters
-local emptySquareSymbols = USE_UNICODE_PIECES and emptySquareSymbols_unicode or emptySquareSymbols_letters
+whiteSymbols = USE_UNICODE_PIECES and whiteSymbols_unicode or whiteSymbols_letters
+blackSymbols = USE_UNICODE_PIECES and blackSymbols_unicode or blackSymbols_letters
+emptySquareSymbols = USE_UNICODE_PIECES and emptySquareSymbols_unicode or emptySquareSymbols_letters
 
-local function updateDisplayMode()
+-- search.lua ======= end
+
+-- ui.lua =======
+
+function updateDisplayMode()
    whiteSymbols = USE_UNICODE_PIECES and whiteSymbols_unicode or whiteSymbols_letters
    blackSymbols = USE_UNICODE_PIECES and blackSymbols_unicode or blackSymbols_letters
    emptySquareSymbols = USE_UNICODE_PIECES and emptySquareSymbols_unicode or emptySquareSymbols_letters
@@ -1173,7 +1183,7 @@ end
 
 -- User interface
 
-local function parse(c)
+function parse(c)
    if not c then return nil end
    local p, v = c:sub(1,1), c:sub(2,2)
    if not (p and v and tonumber(v)) then return nil end
@@ -1182,12 +1192,12 @@ local function parse(c)
    return A1 + fil - 10*rank
 end
 
-local function render(i)
+function render(i)
    local rank, fil = math.floor((i - A1) / 10), (i - A1) % 10
    return string.char(fil + string.byte('a')) .. tostring(-rank + 1)
 end
 
-local function ttfind(t, k)
+function ttfind(t, k)
    assert(t)
 
    if not k or not k[1] or not k[2] then
@@ -1219,7 +1229,7 @@ local function ttfind(t, k)
    return false
 end
 
-local strsplit = function(a)
+strsplit = function(a)
    local out = {}
    while true do
       local pos, _ = a:find('\n')
@@ -1234,7 +1244,7 @@ local strsplit = function(a)
    return out
 end
 
-local function printboard(board, lastMove, checkers, guards, isMate, hints)
+function printboard(board, lastMove, checkers, guards, isMate, hints)
    checkers = checkers or {}
    guards = guards or {}
    hints = hints or {}
@@ -1341,7 +1351,7 @@ end
    print("")
 end
 
-local function renderCaptured(list, symbols)
+function renderCaptured(list, symbols)
    local out = {}
    for _, piece in ipairs(list) do
       table.insert(out, symbols[piece] or piece)
@@ -1349,7 +1359,7 @@ local function renderCaptured(list, symbols)
    return table.concat(out)
 end
 
-local function capturedAt(pos, move)
+function capturedAt(pos, move)
    local i, j = move[0 + __1], move[1 + __1]
    local board = pos.board
    local pb, qb = board[i + __1], board[j + __1]
@@ -1364,20 +1374,20 @@ local function capturedAt(pos, move)
 end
 
 -- True if the piece at move[1] is a pawn; used with captures to reset the 50-move-rule clock.
-local function isPawnMove(pos, move)
+function isPawnMove(pos, move)
    local i = move[0 + __1]
    return pos.board[i + __1] == 80 -- 'P'
 end
 
 -- True if a pawn lands on rank 8 (White's orientation); used to prompt for promotion choice instead of defaulting to queen.
-local function isPromotionMove(pos, move)
+function isPromotionMove(pos, move)
    local i = move[0 + __1]
    local j = move[1 + __1]
    return pos.board[i + __1] == 80 and A8 <= j and j <= H8 -- 'P'
 end
 
 
-local function findKingGuards(p, checkers)
+function findKingGuards(p, checkers)
    checkers = checkers or {}
    local board = p.board
    local kingIdx = nil
@@ -1432,12 +1442,12 @@ local function findKingGuards(p, checkers)
    return guards
 end
 
-local function isLegalMove(pos, move)
+function isLegalMove(pos, move)
    local afterOwn = pos:move(move):rotate()
    return not next(findCheckers(afterOwn))
 end
 
-local function hasLegalMove(pos)
+function hasLegalMove(pos)
    for _, move in ipairs(pos:genMoves()) do
       if isLegalMove(pos, move) then
          return true
@@ -1446,7 +1456,7 @@ local function hasLegalMove(pos)
    return false
 end
 
-local function legalMovesOf(pos)
+function legalMovesOf(pos)
    local out = {}
    for _, move in ipairs(pos:genMoves()) do
       if isLegalMove(pos, move) then
@@ -1457,7 +1467,7 @@ local function legalMovesOf(pos)
 end
 
 -- After a move that is NOT mate: squares the black king can legally escape to. pos is after the played move (rotated - black king is 'K'); mv[2] is converted back to absolute coordinates (119-x).
-local function findKingEscapeSquares(pos)
+function findKingEscapeSquares(pos)
    local kIdx = nil
    local board = pos.board
    for i = 1 - __1, #board - __1 do
@@ -1478,7 +1488,7 @@ local function findKingEscapeSquares(pos)
 end
 
 -- When the king has no free squares: whether black has a move that captures a checking piece. pos is after the move (rotated, black to move); checkerSquares are squares (same rotated system) from findCheckers(pos).
-local function findCapturingDefenders(pos, checkerSquares)
+function findCapturingDefenders(pos, checkerSquares)
    local defenders = {}
    for _, mv in ipairs(pos:genMoves()) do
       local target = mv[2]
@@ -1493,7 +1503,7 @@ end
 
 -- Save/Load game functions
 
-local function compressSaveRows(boardStr)
+function compressSaveRows(boardStr)
    local rows = {}
    for row in boardStr:gmatch("[^\r\n]+") do
       local out = {}
@@ -1514,7 +1524,7 @@ local function compressSaveRows(boardStr)
    return table.concat(rows, ";")
 end
 
-local function expandSaveRows(compact)
+function expandSaveRows(compact)
    local rows = {}
    for row in tostring(compact):gmatch("[^;]+") do
       local out = {}
@@ -1534,7 +1544,7 @@ local function expandSaveRows(compact)
    return rows
 end
 
-local function saveGame(pos, lastMove, capturedByUser, capturedByEngine, whiteMoves, blackMoves, halfmoveClock, nextToMove, moveHistory, startingBoard, extra)
+function saveGame(pos, lastMove, capturedByUser, capturedByEngine, whiteMoves, blackMoves, halfmoveClock, nextToMove, moveHistory, startingBoard, extra)
    local boardStr120 = arrayToBoard(pos.board)
    local boardLines = {}
    for rank = 8, 1, -1 do
@@ -1600,7 +1610,7 @@ local function saveGame(pos, lastMove, capturedByUser, capturedByEngine, whiteMo
    return code
 end
 
-local function loadGame(code)
+function loadGame(code)
    if code:match("^board:") then -- kompresovani puzzle format (board:...)
       local compact = code:match("^board:(.+)$")
       if not compact then return nil end
@@ -1766,7 +1776,7 @@ local function loadGame(code)
 end
 
 -- Replays comma-separated UCI history (e.g. "e2e4,e7e5,...") from initial position to rebuild gameHistory/positionCounts for threefold repetition across save/load. Falls back to seeding only fallbackPos if histStr is missing/empty/"-" or replay fails.
-local function rebuildHistoryFromMoves(histStr, fallbackPos, startBoard)
+function rebuildHistoryFromMoves(histStr, fallbackPos, startBoard)
    local gameHistory = {}
    local positionCounts = {}
 
@@ -1839,7 +1849,7 @@ local function rebuildHistoryFromMoves(histStr, fallbackPos, startBoard)
 end
 
 
-local function displayPosition(pos, lastMove, capturedByUser, capturedByEngine, blackMoves)
+function displayPosition(pos, lastMove, capturedByUser, capturedByEngine, blackMoves)
    if lastMove then
       local moveLabel = blackMoves and (blackMoves .. ". ") or ""
       print("Sunfish " .. moveLabel .. "move: \n" .. render(lastMove[1]) .. render(lastMove[2]))
@@ -1855,9 +1865,11 @@ local function displayPosition(pos, lastMove, capturedByUser, capturedByEngine, 
    print("Captured: " .. renderCaptured(capturedByUser, blackSymbols))
 end
 
--- Help
+-- ui.lua ======= end
 
-local function showHelp()
+-- help.lua =======
+
+function showHelp()
    print("")
    echoW("=== CHESS.LUA HELP ===")
    print("")
@@ -2018,7 +2030,7 @@ end
 
 -- About
 
-local function showAbout()
+function showAbout()
    print("")
    echoW("=== ABOUT SUNFISH.LUA ===")
    print("")
@@ -2089,9 +2101,13 @@ local function showAbout()
    echoW("↑↑↑ ABOUT SUNFISH.LUA ↑↑↑")
 end
 
+-- help.lua ======= End
+
+-- mate1.lua =======
+
 -- AI puzzle mode ("m1")
 
-local emptyBoard =
+emptyBoard =
     '         \n' ..
     '         \n' ..
     ' ........\n' ..
@@ -2105,12 +2121,13 @@ local emptyBoard =
     '         \n' ..
     '          '
 
-local aiWhitePool = {"Q","R","B","N","P"}
-local aiBlackPool = {"q","r","b","n","p"}
-local aiPieceCaps = {Q = 1, R = 2, B = 2, N = 2, P = 8}
-local AI_MATE1_ATTEMPTS = 600
+aiWhitePool = {"Q","R","B","N","P"}
+aiBlackPool = {"q","r","b","n","p"}
+aiPieceCaps = {Q = 1, R = 2, B = 2, N = 2, P = 8}
+AI_MATE1_ATTEMPTS = 600
 
-local function pickCappedPieceType(pool, counts)
+
+function pickCappedPieceType(pool, counts)
    local candidates = {}
    for _, pc in ipairs(pool) do
       local base = pc:upper()
@@ -2122,11 +2139,11 @@ local function pickCappedPieceType(pool, counts)
    return candidates[math.random(#candidates)]
 end
 
-local function aiPut(board, i, ch)
+function aiPut(board, i, ch)
    return board:sub(1, i-1) .. ch .. board:sub(i+1)
 end
 
-local function randomFreeSquare(occupied, avoidBackRanks, forcedColor)
+function randomFreeSquare(occupied, avoidBackRanks, forcedColor)
    for _ = 1, 40 do
       local f, r = math.random(0,7), math.random(0,7)
       if not (avoidBackRanks and (r == 0 or r == 7)) then
@@ -2146,7 +2163,7 @@ local function randomFreeSquare(occupied, avoidBackRanks, forcedColor)
    return nil
 end
 
-local function findMateIn1Move(pos)
+function findMateIn1Move(pos)
    for _, mv in ipairs(pos:genMoves()) do
       if isLegalMove(pos, mv) then
          local newPos = pos:move(mv)
@@ -2159,7 +2176,7 @@ local function findMateIn1Move(pos)
    return nil
 end
 
-local function genAiMateIn1(maxAttempts)
+function genAiMateIn1(maxAttempts)
    maxAttempts = maxAttempts or AI_MATE1_ATTEMPTS
 
    for _ = 1, maxAttempts do
@@ -2247,13 +2264,13 @@ local function genAiMateIn1(maxAttempts)
    return nil
 end
 
-local pieceFullNames = {
+pieceFullNames = {
    K = "King", Q = "Queen", R = "Rook",
    B = "Bishop", N = "Knight", P = "Pawn",
 }
 
 -- Returns (solved, quit, newBoard); newBoard lets callers pick up a board loaded via 'l' (reassignment inside was previously lost with only 2 return values)
-local function attemptAiPuzzle(board)
+function attemptAiPuzzle(board)
    local curPos = Position.new(board, 0, {false,false}, {false,false}, 0, 0)
    printboard(arrayToBoard(curPos.board))
    print("Find mate in 1 move: ")
@@ -2465,7 +2482,7 @@ end
    return false, false, board
 end
 
-local function aipuzMate1()
+function aipuzMate1()
    print("")
    echoW("=== PUZZLE MODE: MATE IN 1 ===")
    print("• 'h1/h2/h3/h4' for hint")
@@ -2493,10 +2510,11 @@ local function aipuzMate1()
    end
 end
 
--- Challenge mode ("abc") - "Challenge Game": mate-in-N-moves puzzle vs Sunfish, with optional on-board hint
+-- mate1.lua ======= end
 
--- Silences binding.exec() for duration of fn() - suppresses "(depth X, Nk nodes)" spam when search() runs in the background for a hint
-local function withQuietExec(fn)
+-- challenge.lua ======= 
+
+function withQuietExec(fn)
    local realExec = binding.exec
    binding.exec = function(_) end
    local ok, a, b, c, d, e = pcall(fn)
@@ -2506,13 +2524,13 @@ local function withQuietExec(fn)
 end
 
 -- Best move for the side to move in `pos` (player/White in challenge mode), shown as an on-board hint; same node budget as Sunfish's own move. search() only treats a position as a repetition draw at deeper plies, never for the root move, so it can keep suggesting a back-and-forth into a seen position - if the top suggestion would revisit `history`, fall back to the best legal alternative that doesn't. avoidMove (player's own move from two of their own plies ago, e.g. an undone d4d3) is also excluded when a non-repeating alternative exists, to stop the hint nudging a stalling shuffle.
-local HINT_NODES_BEST = nil       -- nil = reuse NODES_SEARCHED
+HINT_NODES_BEST = nil       -- nil = reuse NODES_SEARCHED
 
-local function movesEqual(a, b)
+function movesEqual(a, b)
    return a and b and a[1] == b[1] and a[2] == b[2] and a[3] == b[3]
 end
 
-local function findHintMove(pos, history, avoidMove)
+function findHintMove(pos, history, avoidMove)
    local legal = legalMovesOf(pos)
    if #legal == 0 then return nil end
 
@@ -2553,7 +2571,7 @@ local function findHintMove(pos, history, avoidMove)
 end
 
 -- Converts the candidate move into a hints table for printboard(), keyed by absolute index; from and to squares get wrapped in single quotes.
-local function buildHintDisplay(move)
+function buildHintDisplay(move)
    local hints = {}
    if move then
       hints[move[1]] = {quote = "'"}
@@ -2563,10 +2581,10 @@ local function buildHintDisplay(move)
 end
 
 -- How many EXTRA pieces White gets over Black when generating a Challenge position (on top of the ~55-70% split). 0 = no extra bonus.
-local CHALLENGE_WHITE_EXTRA_PIECES = 2
+CHALLENGE_WHITE_EXTRA_PIECES = 2
 
 -- Random "legal-looking" position: both kings + a spread of extra pieces (White gets a material edge for a realistic mate within the move budget). Unlike genAiMateIn1(), no immediate forced mate is required.
-local function genChallengePosition()
+function genChallengePosition()
    for _ = 1, CHALLENGE_GEN_ATTEMPTS do
       local bkFile, bkRank = math.random(0,7), math.random(0,7)
       local bkIdx = A1 + bkFile - 10*bkRank
@@ -2659,7 +2677,7 @@ local function genChallengePosition()
 end
 
 -- Runs one full challenge game on the given board: player is White. Returns "won", "quit", or "newgame" (player asked to regenerate a fresh position without finishing this one). Ends only via checkmate, draw, or the player leaving/resigning - no move limit.
-local function playChallengeGame(board, startPos, startLastMove, startCapturedByUser,
+function playChallengeGame(board, startPos, startLastMove, startCapturedByUser,
                                   startCapturedByEngine, startWhiteMoves, startHalfmoveClock,
                                   startGameHistory, startPositionCounts, startMoveHistory, startBlackMoves)
    local pos = startPos or Position.new(board, 0, {false,false}, {false,false}, 0, 0)
@@ -3201,7 +3219,7 @@ local function playChallengeGame(board, startPos, startLastMove, startCapturedBy
    end
 end
 
-local function challengeMode()
+function challengeMode()
    print("")
    echoW("=== CHALLENGE GAME ===")
    print("• 'th' - toggle hints")
@@ -3229,13 +3247,11 @@ local function challengeMode()
    end
 end
 
+-- challenge.lua ======= end
 
+-- main.lua ======= 
 
-
--- Main game loop
-
---
-local function main()
+function main()
    local pos = Position.new(initial, 0, {true,true}, {true,true}, 0, 0)
 -- Board this game started from (standard, unless a custom/puzzle position is loaded via 'l' before any moves). Saved with the game code so rebuildHistoryFromMoves() replays from the real start instead of always assuming `initial`.
    local startingBoard = initial
@@ -3269,7 +3285,7 @@ local function main()
    }
 
    print("")
-   echoW("=== sunfish.lua v" .. SCRIPT_VERSION .. " ===")
+   echoW("=== sunfish.lua ===")
    print("• 'h' for help")
    print("• 'q' to quit.")
 
@@ -3457,7 +3473,7 @@ while true do
             local rotated = pos:rotate()
             print("")
             echoW("🐠 Sunfish is thinking...")
-local enginemove, score, reachedDepth, usedNodes, elapsed = search(pos, NODES_SEARCHED, gameHistory)
+enginemove, score, reachedDepth, usedNodes, elapsed = search(pos, NODES_SEARCHED, gameHistory)
 assert(score)
             if enginemove and not isLegalMove(rotated, enginemove) then
                enginemove = nil
@@ -3620,11 +3636,11 @@ positionCounts[tpKey(pos)] = (positionCounts[tpKey(pos)] or 0) + 1
       }
 
       local checkersAfterUser = findCheckers(pos)
-local guardsAfterUser = findKingGuards(pos, checkersAfterUser)
-local engineHasMove = hasLegalMove(pos)
-local isMateNow = next(checkersAfterUser) ~= nil and not engineHasMove
-local displayCheckers = {}
-local displayGuards = {}
+guardsAfterUser = findKingGuards(pos, checkersAfterUser)
+engineHasMove = hasLegalMove(pos)
+isMateNow = next(checkersAfterUser) ~= nil and not engineHasMove
+displayCheckers = {}
+displayGuards = {}
 for idx in pairs(checkersAfterUser) do
    displayCheckers[119 - idx] = true
 end
@@ -3660,7 +3676,7 @@ end
          break
       end
       echoW("🐠 Sunfish is thinking...")
-local enginemove, score, reachedDepth, usedNodes, elapsed = search(pos, NODES_SEARCHED, gameHistory)
+enginemove, score, reachedDepth, usedNodes, elapsed = search(pos, NODES_SEARCHED, gameHistory)
 assert(score)
       if score <= -MATE_UPPER then
          echoS("Checkmate in " .. whiteMoves .. " moves for White!")
@@ -3741,6 +3757,7 @@ positionCounts[tpKey(pos)] = (positionCounts[tpKey(pos)] or 0) + 1
    end
 end
 
-math.randomseed(os.time())
+-- main.lua ======= end
 
+math.randomseed(os.time())
 main()
