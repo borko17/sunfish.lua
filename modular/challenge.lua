@@ -1,4 +1,4 @@
--- challenge.lua ======= 
+-- challenge.lua ======= 2224
 
 function withQuietExec(fn)
    local realExec = binding.exec
@@ -192,6 +192,8 @@ function playChallengeGame(board, startPos, startLastMove, startCapturedByUser,
    }
    local hintsOn = CHALLENGE_HINTS_ENABLED
    local cachedHints = nil   -- hints table for the CURRENT position, computed once per move
+-- Single-level undo snapshot: full state captured right BEFORE the player's most recent move (pre-move, pre-Sunfish-reply). 'z' restores this and clears it (no re-undo / no redo).
+   local undoSnapshot = nil
 
 -- Player's own move from two of their plies ago (skips the most recent, returns the one before). Used so findHintMove doesn't suggest undoing the move just played (e.g. after d4d3 then d3d4, don't suggest d4d3 again). Returns {from, to} or nil.
    local function findMoveTwoPliesAgo()
@@ -272,9 +274,36 @@ function playChallengeGame(board, startPos, startLastMove, startCapturedByUser,
             print("Captured: " .. renderCaptured(capturedByUser, blackSymbols))
             goto continue
          end
+         if crdn == 'z' then
+            print("----")
+            if not undoSnapshot then
+               echoE("Nothing to undo yet.")
+               showBoard(checkers, guards, false, false)
+            else
+               pos = undoSnapshot.pos
+               lastMove = undoSnapshot.lastMove
+               capturedByUser = undoSnapshot.capturedByUser
+               capturedByEngine = undoSnapshot.capturedByEngine
+               whiteMoves = undoSnapshot.whiteMoves
+               blackMoves = undoSnapshot.blackMoves
+               halfmoveClock = undoSnapshot.halfmoveClock
+               gameHistory = undoSnapshot.gameHistory
+               positionCounts = undoSnapshot.positionCounts
+               moveHistory = undoSnapshot.moveHistory
+               moveSnapshots[whiteMoves + 1] = nil -- drop the snapshot that pointed at the now-undone move
+               cachedHints = nil
+               undoSnapshot = nil -- one level only: no re-undo
+               echoW("Move undone.")
+               checkers = findCheckers(pos)
+               guards = findKingGuards(pos, checkers)
+               showBoard(checkers, guards, false, true)
+            end
+            print("Captured: " .. renderCaptured(capturedByUser, blackSymbols))
+            goto continue
+         end
          if crdn == 'h' then
             print("----")
-            showHelp()
+            showHelpChallenge()
             showBoard(checkers, guards, false, false)
             print("Captured: " .. renderCaptured(capturedByUser, blackSymbols))
             goto continue
@@ -401,6 +430,7 @@ function playChallengeGame(board, startPos, startLastMove, startCapturedByUser,
                   local nextToMove = result[8] or "b"
                   local histStr = result[9]
                   moveSnapshots = {}
+                  undoSnapshot = nil -- loading a code invalidates any pending undo
                   gameHistory, positionCounts = rebuildHistoryFromMoves(histStr, pos, board)
                   moveHistory = {}
                   if histStr and histStr ~= '-' and histStr ~= '' then
@@ -541,6 +571,19 @@ function playChallengeGame(board, startPos, startLastMove, startCapturedByUser,
                end
                usermove[3] = promoChar
             end
+-- Capture full pre-move state for 'z' (undo), right before this move is applied. One level only: overwrites any previous undoSnapshot.
+            undoSnapshot = {
+               pos = pos,
+               lastMove = lastMove,
+               capturedByUser = {table.unpack(capturedByUser)},
+               capturedByEngine = {table.unpack(capturedByEngine)},
+               whiteMoves = whiteMoves,
+               blackMoves = blackMoves,
+               halfmoveClock = halfmoveClock,
+               gameHistory = (function() local t = {}; for k,v in pairs(gameHistory) do t[k]=v end; return t end)(),
+               positionCounts = (function() local t = {}; for k,v in pairs(positionCounts) do t[k]=v end; return t end)(),
+               moveHistory = {table.unpack(moveHistory)},
+            }
             whiteMoves = whiteMoves + 1
             print(crdn)
             break
