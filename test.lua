@@ -88,8 +88,6 @@ for _, part in ipairs(chunks) do
    end
 end
 
-math.randomseed(os.time())
-main()
 
 -- CONFIG has moved to loader.lua (it runs first and sets USE_UNICODE_PIECES,
 -- SHOW_ANNOTATIONS, CHALLENGE_MIN_PIECES, CHALLENGE_MAX_PIECES,
@@ -3803,4 +3801,7 @@ positionCounts[tpKey(pos)] = (positionCounts[tpKey(pos)] or 0) + 1
    end
    end
 end
+
+math.randomseed(os.time())
+main()
 
