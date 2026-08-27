@@ -1,3 +1,5 @@
+-- help.lua =======
+
 function showHelp()
    print("")
    echoW("=== CHESS.LUA HELP ===")
@@ -230,3 +232,4 @@ function showAbout()
    echoW("↑↑↑ ABOUT SUNFISH.LUA ↑↑↑")
 end
 
+-- help.lua ======= end
