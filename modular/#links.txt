@@ -9,4 +9,4 @@ https://raw.githubusercontent.com/borko17/sunfish.lua/main/modular/main.lua
 https://raw.githubusercontent.com/borko17/sunfish.lua/main/modular/manifest.txt
 
 
-https://github.com/borko17/sunfish.lua/blob/main/sunfish.lua
+https://raw.githubusercontent.com/borko17/sunfish.lua/main/sunfish.lua
