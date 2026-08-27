@@ -174,7 +174,20 @@ function playChallengeGame(board, startPos, startLastMove, startCapturedByUser,
    local gameHistory = startGameHistory or { [tpKey(pos)] = true }
    local positionCounts = startPositionCounts or { [tpKey(pos)] = 1 }
    local moveHistory = startMoveHistory or {}
-   local moveSnapshots = {}
+-- Index 0 is the starting position (before any moves), so 's0' can save it too. next="w" since it's the player's turn there.
+   local moveSnapshots = {
+      [0] = {
+         pos = pos,
+         lastMove = lastMove,
+         capturedByUser = {table.unpack(capturedByUser)},
+         capturedByEngine = {table.unpack(capturedByEngine)},
+         whiteMoves = whiteMoves,
+         blackMoves = blackMoves,
+         halfmoveClock = halfmoveClock,
+         moveHistory = {table.unpack(moveHistory)},
+         nextToMove = "w",
+      }
+   }
    local hintsOn = CHALLENGE_HINTS_ENABLED
    local cachedHints = nil   -- hints table for the CURRENT position, computed once per move
 
@@ -358,7 +371,7 @@ function playChallengeGame(board, startPos, startLastMove, startCapturedByUser,
                print("")
             else
                local code = saveGame(snap.pos, snap.lastMove, snap.capturedByUser, snap.capturedByEngine,
-                                      snap.whiteMoves, snap.blackMoves, snap.halfmoveClock, "b", snap.moveHistory, board,
+                                      snap.whiteMoves, snap.blackMoves, snap.halfmoveClock, snap.nextToMove or "b", snap.moveHistory, board,
                                       {mode = "abc", hints = (hintsOn and "1" or "0")})
                echoW("=== GAME CODE (as of move " .. n .. ") ===")
                print(code)
@@ -383,6 +396,7 @@ function playChallengeGame(board, startPos, startLastMove, startCapturedByUser,
                   whiteMoves = result[5] or 0
                   blackMoves = result[6] or 0
                   halfmoveClock = result[7] or 0
+                  local nextToMove = result[8] or "b"
                   local histStr = result[9]
                   moveSnapshots = {}
                   gameHistory, positionCounts = rebuildHistoryFromMoves(histStr, pos, board)
@@ -401,12 +415,85 @@ function playChallengeGame(board, startPos, startLastMove, startCapturedByUser,
                   elseif loadedHints == "0" then
                      hintsOn = false
                   end
+
+-- s0 after a load = the position exactly as loaded, before any further moves (and before Sunfish's automatic reply below).
+                  moveSnapshots[0] = {
+                     pos = pos,
+                     lastMove = lastMove,
+                     capturedByUser = {table.unpack(capturedByUser)},
+                     capturedByEngine = {table.unpack(capturedByEngine)},
+                     whiteMoves = whiteMoves,
+                     blackMoves = blackMoves,
+                     halfmoveClock = halfmoveClock,
+                     moveHistory = {table.unpack(moveHistory)},
+                     nextToMove = nextToMove,
+                  }
+
                   local reloadCode = saveGame(pos, lastMove, capturedByUser, capturedByEngine, whiteMoves, blackMoves, halfmoveClock, "w", moveHistory, board,
                                                {mode = "abc", hints = (hintsOn and "1" or "0")})
                   echoW("=== GAME CODE ===")
                   print(reloadCode)
                   echoW("================")
                   echoW("Game loaded.")
+
+-- Sunfish's turn: show the loaded position (your move), then play its reply automatically, as in a live game.
+                  if nextToMove == "b" then
+                     if lastMove then
+                        echoW("Loaded position (after your move):")
+                        print("Your move: \n" .. render(lastMove[1]) .. render(lastMove[2]))
+                        local checkersAfterYourMove = findCheckers(pos)
+                        local guardsAfterYourMove = findKingGuards(pos, checkersAfterYourMove)
+                        if next(checkersAfterYourMove) then
+                           echoS("Check!")
+                        end
+                        printboard(arrayToBoard(pos.board), lastMove, checkersAfterYourMove, guardsAfterYourMove)
+                        print("Captured: " .. renderCaptured(capturedByUser, blackSymbols))
+                     end
+
+                     local engineHasMove = hasLegalMove(pos)
+                     if not engineHasMove then
+                        echoW("Sunfish has no legal move (checkmate or stalemate).")
+                     else
+                        echoW("🐠 Sunfish is thinking...")
+                        local enginemove, score, reachedDepth, usedNodes, elapsed = search(pos, CHALLENGE_ENGINE_NODES, gameHistory)
+                        assert(score)
+
+                        if enginemove and not isLegalMove(pos, enginemove) then
+                           enginemove = nil
+                        end
+                        if not enginemove then
+                           local legal = legalMovesOf(pos)
+                           if #legal > 0 then
+                              table.sort(legal, function(a, b) return pos:value(a) > pos:value(b) end)
+                              enginemove = legal[1]
+                           end
+                        end
+
+                        if enginemove then
+                           local engineCap = capturedAt(pos, enginemove)
+                           local enginePawnMove = isPawnMove(pos, enginemove)
+                           if engineCap or enginePawnMove then
+                              halfmoveClock = 0
+                           else
+                              halfmoveClock = halfmoveClock + 1
+                           end
+                           if engineCap then table.insert(capturedByEngine, engineCap) end
+
+                           local engineMoveNotation = render(119-enginemove[0 + __1]) .. render(119-enginemove[1 + __1])
+                           if enginemove[3] and enginemove[3] ~= '' and enginemove[3] ~= 'Q' then
+                              engineMoveNotation = engineMoveNotation .. enginemove[3]:lower()
+                           end
+                           table.insert(moveHistory, {notation = engineMoveNotation, by = "sunfish"})
+                           pos = pos:move(enginemove)
+                           pos.score = 0
+                           blackMoves = blackMoves + 1
+                           gameHistory[tpKey(pos)] = true
+                           positionCounts[tpKey(pos)] = (positionCounts[tpKey(pos)] or 0) + 1
+                           lastMove = {119 - enginemove[1], 119 - enginemove[2]}
+                           print("Sunfish " .. blackMoves .. ". move: \n" .. engineMoveNotation .. " (" .. math.floor(elapsed + 0.5) .. "s) - score: " .. score)
+                        end
+                     end
+                  end
                else
                   echoE("Could not load that code.")
                end
@@ -486,6 +573,7 @@ function playChallengeGame(board, startPos, startLastMove, startCapturedByUser,
          blackMoves = blackMoves,
          halfmoveClock = halfmoveClock,
          moveHistory = {table.unpack(moveHistory)},
+         nextToMove = "b",
       }
 
       local checkersAfterUser = findCheckers(pos)
