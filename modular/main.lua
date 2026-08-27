@@ -65,7 +65,7 @@ while true do
        print("----")
       echoW("Quitting game.")
       return
-elseif crdn == 'deb1' then
+elseif crdn == 'abcd' then
        print("----")
       runAutoDebugGames(AUTO_DEBUG_GAMES)
       binding.exec("echo -w " .. "Resuming the game.")
