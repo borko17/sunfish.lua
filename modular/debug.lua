@@ -1,6 +1,6 @@
 -------------------------------------------------------------------------------
--- Debug: automatic Chess School games ("abcd")
--- Plays N Chess School games with NO user input: White always plays the
+-- Debug: automatic Challenge Game games ("abcd")
+-- Plays N Challenge Game games with NO user input: White always plays the
 -- on-board hint move (findHintMove), Black is Sunfish at
 -- CHALLENGE_ENGINE_NODES. Prints a one-line result per game and a final
 -- win/loss tally. Meant to sanity-check "how well does following the hint
@@ -10,16 +10,16 @@
 AUTO_DEBUG_GAMES = 10
 AUTO_DEBUG_MAX_MOVES = 200 -- safety cap so a drifting game can't hang forever
 
--- Plays one full Chess School game automatically (White = hint move every
+-- Plays one full Challenge Game automatically (White = hint move every
 -- turn, Black = Sunfish). Returns "won" or "lost", the number of White
 -- moves played, and a short reason string.
 function playChallengeGameAuto(board)
-   pos = Position.new(board, 0, {false,false}, {false,false}, 0, 0)
-   capturedByUser, capturedByEngine = {}, {}
-   whiteMoves, blackMoves = 0, 0
-   halfmoveClock = 0
-   gameHistory = { [tpKey(pos)] = true }
-   positionCounts = { [tpKey(pos)] = 1 }
+   local pos = Position.new(board, 0, {false,false}, {false,false}, 0, 0)
+   local capturedByUser, capturedByEngine = {}, {}
+   local whiteMoves, blackMoves = 0, 0
+   local halfmoveClock = 0
+   local gameHistory = { [tpKey(pos)] = true }
+   local positionCounts = { [tpKey(pos)] = 1 }
 
    while true do
       if whiteMoves >= AUTO_DEBUG_MAX_MOVES then
@@ -27,9 +27,9 @@ function playChallengeGameAuto(board)
       end
 
       -- White (player stand-in) always plays the current hint move.
-      hintMove = findHintMove(pos, gameHistory, nil)
+      local hintMove = findHintMove(pos, gameHistory, nil)
       if not hintMove then
-         legal = legalMovesOf(pos)
+         local legal = legalMovesOf(pos)
          if #legal == 0 then
             if next(findCheckers(pos)) then
                return "lost", whiteMoves, "no legal move (mated)"
@@ -42,8 +42,8 @@ function playChallengeGameAuto(board)
       end
 
       whiteMoves = whiteMoves + 1
-      userCap = capturedAt(pos, hintMove)
-      userPawnMove = isPawnMove(pos, hintMove)
+      local userCap = capturedAt(pos, hintMove)
+      local userPawnMove = isPawnMove(pos, hintMove)
       if userCap or userPawnMove then halfmoveClock = 0 else halfmoveClock = halfmoveClock + 1 end
       if userCap then table.insert(capturedByUser, userCap) end
 
@@ -52,9 +52,9 @@ function playChallengeGameAuto(board)
       gameHistory[tpKey(pos)] = true
       positionCounts[tpKey(pos)] = (positionCounts[tpKey(pos)] or 0) + 1
 
-      checkersAfterUser = findCheckers(pos)
-      engineHasMove = hasLegalMove(pos)
-      isMateNow = next(checkersAfterUser) ~= nil and not engineHasMove
+      local checkersAfterUser = findCheckers(pos)
+      local engineHasMove = hasLegalMove(pos)
+      local isMateNow = next(checkersAfterUser) ~= nil and not engineHasMove
 
       if isMateNow then
          return "won", whiteMoves, "checkmate"
@@ -73,13 +73,13 @@ function playChallengeGameAuto(board)
       end
 
       -- Black (Sunfish) replies, weakened via CHALLENGE_ENGINE_NODES.
-      enginemove, score = search(pos, CHALLENGE_ENGINE_NODES, gameHistory)
+      local enginemove, score = search(pos, CHALLENGE_ENGINE_NODES, gameHistory)
 
       if enginemove and not isLegalMove(pos, enginemove) then
          enginemove = nil
       end
       if not enginemove then
-         legal = legalMovesOf(pos)
+         local legal = legalMovesOf(pos)
          if #legal == 0 then
             if next(findCheckers(pos)) then
                return "won", whiteMoves, "checkmate"
@@ -91,8 +91,8 @@ function playChallengeGameAuto(board)
          enginemove = legal[1]
       end
 
-      engineCap = capturedAt(pos, enginemove)
-      enginePawnMove = isPawnMove(pos, enginemove)
+      local engineCap = capturedAt(pos, enginemove)
+      local enginePawnMove = isPawnMove(pos, enginemove)
       if engineCap or enginePawnMove then halfmoveClock = 0 else halfmoveClock = halfmoveClock + 1 end
       if engineCap then table.insert(capturedByEngine, engineCap) end
 
@@ -112,14 +112,14 @@ function playChallengeGameAuto(board)
          return "lost", whiteMoves, "repetition"
       end
 
-      matingCheckers = findCheckers(pos)
+      local matingCheckers = findCheckers(pos)
       if next(matingCheckers) and not hasLegalMove(pos) then
          return "lost", whiteMoves, "checkmate"
       end
    end
 end
 
--- Plays n automatic Chess School games (default AUTO_DEBUG_GAMES) and
+-- Plays n automatic Challenge Game games (default AUTO_DEBUG_GAMES) and
 -- prints a short per-game result plus a final W/L tally. All search()
 -- progress spam ("(depth X, Nk nodes)") is suppressed for the duration.
 function runAutoDebugGames(n)
@@ -131,15 +131,15 @@ function runAutoDebugGames(n)
    print("Black is Sunfish at " .. CHALLENGE_ENGINE_NODES .. " nodes.")
    print("")
 
-   wins, losses = 0, 0
+   local wins, losses = 0, 0
 
    withQuietExec(function()
       for i = 1, n do
-         board = genChallengePosition()
+         local board = genChallengePosition()
          if not board then
             print("Game " .. i .. ": FAILED to generate a position")
          else
-            result, moves, reason = playChallengeGameAuto(board)
+            local result, moves, reason = playChallengeGameAuto(board)
             if result == "won" then
                wins = wins + 1
             else
