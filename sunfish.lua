@@ -3235,7 +3235,7 @@ end
 -- Main game loop
 
 --
-function main()
+local function main()
    local pos = Position.new(initial, 0, {true,true}, {true,true}, 0, 0)
 -- Board this game started from (standard, unless a custom/puzzle position is loaded via 'l' before any moves). Saved with the game code so rebuildHistoryFromMoves() replays from the real start instead of always assuming `initial`.
    local startingBoard = initial
@@ -3269,7 +3269,7 @@ function main()
    }
 
    print("")
-   echoW("=== sunfish.lua ===")
+   echoW("=== sunfish.lua v" .. SCRIPT_VERSION .. " ===")
    print("• 'h' for help")
    print("• 'q' to quit.")
 
