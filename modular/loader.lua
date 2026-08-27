@@ -9,6 +9,8 @@ CHALLENGE_HINTS_ENABLED = false -- shows suggested move; toggle with 'th'
 NODES_SEARCHED = 2000 -- node budget/search; soft limit, checked only between depths
 CHALLENGE_ENGINE_NODES = 600 -- separate, weaker budget for Sunfish's replies in Challenge mode
 TABLE_SIZE = NODES_SEARCHED * 25 -- scaled off NODES_SEARCHED so it doesn't thrash; upstream's 1e6 too heavy for Luaj-jse on phone
+MATE_VALUE = 30000 -- exceeds 8*queen+2*(rook+knight+bishop); king value is double this
+MATE_UPPER = 60000 + (10 * 2529) -- search() scores mate near this, not MATE_VALUE - callers must match
 
 -- sunfish.lua bootstrap loader
 -- This is the ONLY file you paste into Yantra's `scripts` editor.
