@@ -8,4 +8,4 @@
 | `mate1.lua` | 2092–2498 |
 | `challenge.lua` | 2499–3236 |
 | `main.lua` | 3237–3743 |
-| poziv na kraju (`math.randomseed(os.time()); main()`) | 3744–3745 |
+| poziv na kraju \n(`math.randomseed(os.time()); main()`) | 3744–3745 |
