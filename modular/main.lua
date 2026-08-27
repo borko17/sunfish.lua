@@ -65,11 +65,6 @@ while true do
        print("----")
       echoW("Quitting game.")
       return
-elseif crdn == 'abcd' then
-       print("----")
-      runAutoDebugGames(AUTO_DEBUG_GAMES)
-      binding.exec("echo -w " .. "Resuming the game.")
-      displayPosition(pos, lastMove, capturedByUser, capturedByEngine, blackMoves)
    elseif crdn == 'u' then
       print("----")
    checkForUpdate()
@@ -313,6 +308,11 @@ print("Captured: " .. renderCaptured(capturedByUser, blackSymbols))
    elseif crdn == 'm1' then
       aipuzMate1()
       echoW("Resuming the game.")
+      displayPosition(pos, lastMove, capturedByUser, capturedByEngine, blackMoves)
+   elseif crdn == 'abcd' then
+       print("----")
+      runAutoDebugGames(AUTO_DEBUG_GAMES)
+      binding.exec("echo -w " .. "Resuming the game.")
       displayPosition(pos, lastMove, capturedByUser, capturedByEngine, blackMoves)
    elseif crdn == 'cg' then
       challengeMode()
