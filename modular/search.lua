@@ -1,3 +1,5 @@
+-- search.lua =======
+
 function search(pos, maxn, history)
    maxn = maxn or NODES_SEARCHED
    history = history or {}
@@ -372,4 +374,6 @@ blackSymbols_letters = {
 whiteSymbols = USE_UNICODE_PIECES and whiteSymbols_unicode or whiteSymbols_letters
 blackSymbols = USE_UNICODE_PIECES and blackSymbols_unicode or blackSymbols_letters
 emptySquareSymbols = USE_UNICODE_PIECES and emptySquareSymbols_unicode or emptySquareSymbols_letters
+
+-- search.lua ======= end
 
