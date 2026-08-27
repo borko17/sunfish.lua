@@ -1,4 +1,4 @@
--- mate1.lua =======
+-- mate1.lua ======= 2224
 
 -- AI puzzle mode ("m1")
 
@@ -208,7 +208,7 @@ end
 
 if crdn == 'h' then
    print("----")
-   showHelp()
+   showHelpPuzzle()
    return false, false, board
 end
 
