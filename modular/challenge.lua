@@ -450,28 +450,29 @@ function playChallengeGame(board, startPos, startLastMove, startCapturedByUser,
                         print("Captured: " .. renderCaptured(capturedByUser, blackSymbols))
                      end
 
-                     local engineHasMove = hasLegalMove(pos)
+                     local rotated = pos:rotate()
+                     local engineHasMove = hasLegalMove(rotated)
                      if not engineHasMove then
                         echoW("Sunfish has no legal move (checkmate or stalemate).")
                      else
                         echoW("🐠 Sunfish is thinking...")
-                        local enginemove, score, reachedDepth, usedNodes, elapsed = search(pos, CHALLENGE_ENGINE_NODES, gameHistory)
+                        local enginemove, score, reachedDepth, usedNodes, elapsed = search(rotated, CHALLENGE_ENGINE_NODES, gameHistory)
                         assert(score)
 
-                        if enginemove and not isLegalMove(pos, enginemove) then
+                        if enginemove and not isLegalMove(rotated, enginemove) then
                            enginemove = nil
                         end
                         if not enginemove then
-                           local legal = legalMovesOf(pos)
+                           local legal = legalMovesOf(rotated)
                            if #legal > 0 then
-                              table.sort(legal, function(a, b) return pos:value(a) > pos:value(b) end)
+                              table.sort(legal, function(a, b) return rotated:value(a) > rotated:value(b) end)
                               enginemove = legal[1]
                            end
                         end
 
                         if enginemove then
-                           local engineCap = capturedAt(pos, enginemove)
-                           local enginePawnMove = isPawnMove(pos, enginemove)
+                           local engineCap = capturedAt(rotated, enginemove)
+                           local enginePawnMove = isPawnMove(rotated, enginemove)
                            if engineCap or enginePawnMove then
                               halfmoveClock = 0
                            else
@@ -484,7 +485,7 @@ function playChallengeGame(board, startPos, startLastMove, startCapturedByUser,
                               engineMoveNotation = engineMoveNotation .. enginemove[3]:lower()
                            end
                            table.insert(moveHistory, {notation = engineMoveNotation, by = "sunfish"})
-                           pos = pos:move(enginemove)
+                           pos = rotated:move(enginemove)
                            pos.score = 0
                            blackMoves = blackMoves + 1
                            gameHistory[tpKey(pos)] = true
