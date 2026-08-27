@@ -344,7 +344,7 @@ print("Captured: " .. renderCaptured(capturedByUser, blackSymbols))
       aipuzMate1()
       echoW("Resuming the game.")
       displayPosition(pos, lastMove, capturedByUser, capturedByEngine, blackMoves)
-   elseif crdn == 'abcd' then
+   elseif crdn == 'deb1' then
        print("----")
       runAutoDebugGames(AUTO_DEBUG_GAMES)
       binding.exec("echo -w " .. "Resuming the game.")
