@@ -1,3 +1,4 @@
+-- core.lua ======= 
 
 A1, H1, A8, H8 = 91, 98, 21, 28 -- board is a 120-char padded string for cheap off-board checks
 initial =
@@ -677,3 +678,5 @@ nodes = 0 -- module-scoped: shared by search()'s loop and the inner bound() clos
 -- Quiescence value floor: deeper nodes admit slightly weaker captures/threats before cutting off
 QS = 40
 QS_A = 140
+
+-- core.lua ======= end
