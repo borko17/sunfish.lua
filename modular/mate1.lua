@@ -1,3 +1,5 @@
+-- mate1.lua =======
+
 -- AI puzzle mode ("m1")
 
 emptyBoard =
@@ -402,3 +404,5 @@ function aipuzMate1()
       end
    end
 end
+
+-- mate1.lua ======= end
