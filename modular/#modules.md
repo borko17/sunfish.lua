@@ -1,4 +1,4 @@
-| Modularni fajl | Linije u `sunfish.lua` (monolitni) |
+| Modularni fajlovi | Linije u `sunfish.lua` |
 |---|---|
 | CONFIG + `loader.lua` | 1–16 |
 | `core.lua` | 17–792 |
