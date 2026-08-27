@@ -1,4 +1,4 @@
--- main.lua ======= 
+-- main.lua ======= 2224
 
 function main()
    local pos = Position.new(initial, 0, {true,true}, {true,true}, 0, 0)
@@ -32,6 +32,8 @@ function main()
          nextToMove = "w",
       }
    }
+-- Single-level undo snapshot: full state captured right BEFORE your most recent move (pre-move, pre-Sunfish-reply). 'z' restores this and clears it (no re-undo / no redo).
+   local undoSnapshot = nil
 
    print("")
    echoW("=== sunfish.lua ===")
@@ -79,6 +81,38 @@ while true do
       updateDisplayMode()
       print("----")
       echoW("Display mode: " .. (USE_UNICODE_PIECES and "Unicode" or "Letters"))
+      displayPosition(pos, lastMove, capturedByUser, capturedByEngine, blackMoves)
+   elseif crdn == 'z' then
+      print("----")
+      if not undoSnapshot then
+         echoE("Nothing to undo yet.")
+      else
+         pos = undoSnapshot.pos
+         lastMove = undoSnapshot.lastMove
+         capturedByUser = undoSnapshot.capturedByUser
+         capturedByEngine = undoSnapshot.capturedByEngine
+         whiteMoves = undoSnapshot.whiteMoves
+         blackMoves = undoSnapshot.blackMoves
+         halfmoveClock = undoSnapshot.halfmoveClock
+         gameHistory = undoSnapshot.gameHistory
+         positionCounts = undoSnapshot.positionCounts
+         moveHistory = undoSnapshot.moveHistory
+         moveSnapshots[whiteMoves + 1] = nil -- drop the snapshot that pointed at the now-undone move
+         undoSnapshot = nil -- one level only: no re-undo
+         echoW("Move undone.")
+      end
+      print("")
+      displayPosition(pos, lastMove, capturedByUser, capturedByEngine, blackMoves)
+   elseif crdn == 'e' then
+      print("----")
+      echoW("🐠 Analyzing position...")
+      local analyzeMove, analyzeScore = search(pos, NODES_SEARCHED, gameHistory)
+      if analyzeMove and isLegalMove(pos, analyzeMove) then
+         echoW("Suggested move: " .. render(analyzeMove[1]) .. render(analyzeMove[2]) .. " (score: " .. analyzeScore .. ")")
+      else
+         echoE("No suggestion available (checkmate or stalemate).")
+      end
+      print("")
       displayPosition(pos, lastMove, capturedByUser, capturedByEngine, blackMoves)
       elseif crdn:match('^n%d+$') then
    local n = tonumber(crdn:match('^n(%d+)$'))
@@ -164,6 +198,7 @@ while true do
          local nextToMove = result[8] or "b"
          local histStr = result[9]
          moveSnapshots = {}
+         undoSnapshot = nil -- loading a code invalidates any pending undo
 
 -- Tracks where this (loaded) game actually started, so replay below - and future saves - use the real starting point rather than always the standard setup. If the code has no explicit start but also no history, the loaded board itself is the start; otherwise fall back to standard (best-effort for old codes missing both fields).
          if result[10] then
@@ -299,7 +334,7 @@ print("Captured: " .. renderCaptured(capturedByUser, blackSymbols))
       return main()
    elseif crdn == 'h' then
        print("----")
-      showHelp()
+      showHelpGame()
       displayPosition(pos, lastMove, capturedByUser, capturedByEngine, blackMoves)
    elseif crdn == '?' then
        print("----")
@@ -344,6 +379,19 @@ print("Captured: " .. renderCaptured(capturedByUser, blackSymbols))
             end
             usermove[3] = promoChar -- ttfind() already auto-filled usermove[3] with 'Q'; overwrite with player's actual choice
          end
+-- Capture full pre-move state for 'z' (undo), right before this move is applied. One level only: overwrites any previous undoSnapshot.
+ undoSnapshot = {
+    pos = pos,
+    lastMove = lastMove,
+    capturedByUser = {table.unpack(capturedByUser)},
+    capturedByEngine = {table.unpack(capturedByEngine)},
+    whiteMoves = whiteMoves,
+    blackMoves = blackMoves,
+    halfmoveClock = halfmoveClock,
+    gameHistory = (function() local t = {}; for k,v in pairs(gameHistory) do t[k]=v end; return t end)(),
+    positionCounts = (function() local t = {}; for k,v in pairs(positionCounts) do t[k]=v end; return t end)(),
+    moveHistory = {table.unpack(moveHistory)},
+ }
  whiteMoves = whiteMoves + 1
 print(crdn .. " (" .. math.floor(inputElapsed + 0.5) .. "s)")
 break
