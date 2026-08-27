@@ -39,7 +39,7 @@ local function echoS(msg) binding.exec("echo -s " .. msg) end -- success
 local function echoW(msg) binding.exec("echo -w " .. msg) end -- warning/heading
 
 -- Update
-local SCRIPT_VERSION = "2.608270235"
+local SCRIPT_VERSION = "2.608270635"
 local CHANGELOG = {
    "Fixed: the GAME CODE re-printed right after loading a code now keeps the correct next:b/next:w instead of always showing next:w (this was breaking sN reloads in Challenge Game)",
    "Fixed: board no longer missing after 'Invalid code' message",
