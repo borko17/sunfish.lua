@@ -34,7 +34,7 @@ function printProfile(elapsedArg, depthArg, nodesArg)
    if other < 0 then other = 0 end -- os.clock() rounding can nudge this slightly negative
 
    print(string.format(
-      "[profile] genMoves: %.3fs/%d | move: %.3fs/%d | tp: %.3fs/%d | other: %.3fs | total: %.3fs | depth: %s | nodes: %s",
+      "[profile] genMoves: %.2fs/%d | move: %.2fs/%d | tp: %.2fs/%d | other: %.2fs | total: %.2fs | depth: %s | nodes: %s",
       genMovesTime, genMovesCalls,
       moveTime, moveCalls,
       tpTime, tpCalls,
