@@ -1,4 +1,4 @@
--- main.lua ======= 2224
+-- main.lua ======= 2045
 
 function main()
    local pos = Position.new(initial, 0, {true,true}, {true,true}, 0, 0)
@@ -34,6 +34,7 @@ function main()
    }
 -- Single-level undo snapshot: full state captured right BEFORE your most recent move (pre-move, pre-Sunfish-reply). 'z' restores this and clears it (no re-undo / no redo).
    local undoSnapshot = nil
+   local hintsOn = false
 
    print("")
    echoW("=== sunfish.lua ===")
@@ -70,18 +71,18 @@ while true do
    elseif crdn == 'u' then
       print("----")
    checkForUpdate()
-   displayPosition(pos, lastMove, capturedByUser, capturedByEngine, blackMoves)
+   displayPosition(pos, lastMove, capturedByUser, capturedByEngine, blackMoves, hintsOn, gameHistory)
       elseif crdn == 'a' then
    SHOW_ANNOTATIONS = not SHOW_ANNOTATIONS
    print("----")
    echoW("Annotations: " .. (SHOW_ANNOTATIONS and "ON" or "OFF"))
-   displayPosition(pos, lastMove, capturedByUser, capturedByEngine, blackMoves)
+   displayPosition(pos, lastMove, capturedByUser, capturedByEngine, blackMoves, hintsOn, gameHistory)
    elseif crdn == 'd' then
       USE_UNICODE_PIECES = not USE_UNICODE_PIECES
       updateDisplayMode()
       print("----")
       echoW("Display mode: " .. (USE_UNICODE_PIECES and "Unicode" or "Letters"))
-      displayPosition(pos, lastMove, capturedByUser, capturedByEngine, blackMoves)
+      displayPosition(pos, lastMove, capturedByUser, capturedByEngine, blackMoves, hintsOn, gameHistory)
    elseif crdn == 'z' then
       print("----")
       if not undoSnapshot then
@@ -102,21 +103,13 @@ while true do
          echoW("Move undone.")
       end
       print("")
-      displayPosition(pos, lastMove, capturedByUser, capturedByEngine, blackMoves)
-   elseif crdn == 'e' then
+      displayPosition(pos, lastMove, capturedByUser, capturedByEngine, blackMoves, hintsOn, gameHistory)
+   elseif crdn == 'th' then
+      hintsOn = not hintsOn
       print("----")
-      echoW("Analyzing position...")
-      local analyzeMove, analyzeScore, analyzeDepth, analyzeNodes, analyzeElapsed = search(pos, NODES_SEARCHED, gameHistory)
-      if analyzeMove and isLegalMove(pos, analyzeMove) then
-         echoW("Suggested move: " .. render(analyzeMove[1]) .. render(analyzeMove[2]) .. " (score: " .. analyzeScore .. ")")
-      else
-         echoE("No suggestion available (checkmate or stalemate).")
-      end
-      if PROFILE_PRINT_ENABLED then
-         printProfile(analyzeElapsed, analyzeDepth, analyzeNodes)
-      end
+      echoW("Hints: " .. (hintsOn and "ON" or "OFF"))
       print("")
-      displayPosition(pos, lastMove, capturedByUser, capturedByEngine, blackMoves)
+      displayPosition(pos, lastMove, capturedByUser, capturedByEngine, blackMoves, hintsOn, gameHistory)
       elseif crdn:match('^n%d+$') then
    local n = tonumber(crdn:match('^n(%d+)$'))
    if n and n >= 1000 and n <= 50000 then
@@ -130,7 +123,7 @@ while true do
       echoE("Enter a number between 1000 and 50000, e.g. 'n2000'")
    end
    print("")
-   displayPosition(pos, lastMove, capturedByUser, capturedByEngine, blackMoves)
+   displayPosition(pos, lastMove, capturedByUser, capturedByEngine, blackMoves, hintsOn, gameHistory)
    elseif crdn == 's' then
       local code = saveGame(pos, lastMove, capturedByUser, capturedByEngine, whiteMoves, blackMoves, halfmoveClock, "w", moveHistory, startingBoard)
       print("----")
@@ -138,7 +131,7 @@ while true do
       print(code)
       echoW("================")
       print("")
-      displayPosition(pos, lastMove, capturedByUser, capturedByEngine, blackMoves)
+      displayPosition(pos, lastMove, capturedByUser, capturedByEngine, blackMoves, hintsOn, gameHistory)
    elseif crdn:match('^s%d+$') then
       local n = tonumber(crdn:match('^s(%d+)$'))
       local snap = moveSnapshots[n]
@@ -155,7 +148,7 @@ while true do
          echoW("================")
          print("")
       end
-      displayPosition(pos, lastMove, capturedByUser, capturedByEngine, blackMoves)
+      displayPosition(pos, lastMove, capturedByUser, capturedByEngine, blackMoves, hintsOn, gameHistory)
    elseif crdn == 'm' then
       if #moveHistory == 0 then
           print("----")
@@ -180,7 +173,7 @@ while true do
 -- Single print() call so the whole move list can be copied in one go, instead of one print() per line.
          print(table.concat(out, "\n"))
       end
-      displayPosition(pos, lastMove, capturedByUser, capturedByEngine, blackMoves)
+      displayPosition(pos, lastMove, capturedByUser, capturedByEngine, blackMoves, hintsOn, gameHistory)
    elseif crdn == 'l' then
        print("----")
    print("Paste game code:")
@@ -327,7 +320,7 @@ print("Captured: " .. renderCaptured(capturedByUser, blackSymbols))
       else
          echoE("Invalid code. Game continues.")
          print("")
-         displayPosition(pos, lastMove, capturedByUser, capturedByEngine, blackMoves)
+         displayPosition(pos, lastMove, capturedByUser, capturedByEngine, blackMoves, hintsOn, gameHistory)
       end
    end
    elseif crdn == 'r' then
@@ -341,39 +334,39 @@ print("Captured: " .. renderCaptured(capturedByUser, blackSymbols))
    elseif crdn == 'h' then
        print("----")
       showHelpGame()
-      displayPosition(pos, lastMove, capturedByUser, capturedByEngine, blackMoves)
+      displayPosition(pos, lastMove, capturedByUser, capturedByEngine, blackMoves, hintsOn, gameHistory)
    elseif crdn == '?' then
        print("----")
       showAbout()
-      displayPosition(pos, lastMove, capturedByUser, capturedByEngine, blackMoves)
+      displayPosition(pos, lastMove, capturedByUser, capturedByEngine, blackMoves, hintsOn, gameHistory)
    elseif crdn == 'm1' then
       aipuzMate1()
       echoW("Resuming the game.")
-      displayPosition(pos, lastMove, capturedByUser, capturedByEngine, blackMoves)
+      displayPosition(pos, lastMove, capturedByUser, capturedByEngine, blackMoves, hintsOn, gameHistory)
    elseif crdn == 'deb1' then
        print("----")
       runAutoDebugGames(AUTO_DEBUG_GAMES)
       binding.exec("echo -w " .. "Resuming the game.")
-      displayPosition(pos, lastMove, capturedByUser, capturedByEngine, blackMoves)
+      displayPosition(pos, lastMove, capturedByUser, capturedByEngine, blackMoves, hintsOn, gameHistory)
    elseif crdn == 'cg' then
       challengeMode()
       echoW("Resuming the game.")
-      displayPosition(pos, lastMove, capturedByUser, capturedByEngine, blackMoves)
+      displayPosition(pos, lastMove, capturedByUser, capturedByEngine, blackMoves, hintsOn, gameHistory)
    else
       usermove = {parse(crdn:sub(1,2)), parse(crdn:sub(3,4))}
       local from = usermove[1]
       if not (from and usermove[2]) then
          echoE(crdn.. " - Invalid format. Enter a move like 'a2a3'")
-         displayPosition(pos, lastMove, capturedByUser, capturedByEngine, blackMoves)
+         displayPosition(pos, lastMove, capturedByUser, capturedByEngine, blackMoves, hintsOn, gameHistory)
       elseif not (pos.board[from + __1] and pos.board[from + __1] >= 65 and pos.board[from + __1] <= 90) then -- isupper
          echoE(crdn .. " - There's no piece of yours on that square.")
-         displayPosition(pos, lastMove, capturedByUser, capturedByEngine, blackMoves)
+         displayPosition(pos, lastMove, capturedByUser, capturedByEngine, blackMoves, hintsOn, gameHistory)
       elseif not ttfind(pos:genMoves(), usermove) then
          echoE(crdn .. " - That move is not allowed.")
-         displayPosition(pos, lastMove, capturedByUser, capturedByEngine, blackMoves)
+         displayPosition(pos, lastMove, capturedByUser, capturedByEngine, blackMoves, hintsOn, gameHistory)
       elseif not isLegalMove(pos, usermove) then
          echoE(crdn .. " - That move leaves your king in check.")
-         displayPosition(pos, lastMove, capturedByUser, capturedByEngine, blackMoves)
+         displayPosition(pos, lastMove, capturedByUser, capturedByEngine, blackMoves, hintsOn, gameHistory)
       else
          if isPromotionMove(pos, usermove) then
             print("Promote to (Q/R/B/N)? [default: Q]")
