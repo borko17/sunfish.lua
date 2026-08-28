@@ -13,7 +13,7 @@
 -------------------------------------------------------------------------------
 
 if PROFILE_PRINT_ENABLED == nil then
-   PROFILE_PRINT_ENABLED = true -- fallback if not set in loader.lua CONFIG
+   PROFILE_PRINT_ENABLED = false -- fallback if not set in loader.lua CONFIG
 end
 
 -- elapsedArg/depthArg/nodesArg are the return values of the specific
