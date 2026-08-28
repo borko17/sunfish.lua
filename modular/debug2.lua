@@ -65,7 +65,7 @@ function printProfile(elapsedArg, depthArg, nodesArg)
    ---------------------------------------------------------------------------
 
    print(string.format(
-      "[profile] genMoves: %.2fs/%d | move: %.2fs/%d | tp: %.2fs/%d | other: %.2fs | total: %.2fs | depth: %s | nodes: %s",
+      "[profile] \ngenMoves: %.2fs/%d \nmove: %.2fs/%d \ntp: %.2fs/%d \nother: %.2fs \ntotal: %.2fs \ndepth: %s \nnodes: %s",
       genMovesTime, genMovesCalls,
       moveTime, moveCalls,
       tpTime, tpCalls,
