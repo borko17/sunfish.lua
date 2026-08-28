@@ -23,13 +23,11 @@ local function echoS(msg) binding.exec("echo -s " .. msg) end -- success
 local function echoW(msg) binding.exec("echo -w " .. msg) end -- warning/heading
 
 -- Update
-local SCRIPT_VERSION = "2.608270635"
+local SCRIPT_VERSION = "2.608272224"
 local CHANGELOG = {
-   "Fixed: the GAME CODE re-printed right after loading a code now keeps the correct next:b/next:w instead of always showing next:w (this was breaking sN reloads in Challenge Game)",
-   "Fixed: board no longer missing after 'Invalid code' message",
-   "Fixed: 's0' now works in both normal game and Challenge Game (saves the starting position)",
-   "Fixed: Challenge Game now auto-plays Sunfish's reply after loading a code where it's Sunfish's turn",
-   "sN save codes now correctly record whose turn it is (fixes confusion around whose move sN saves)",
+   "Added Undo ('z'): undoes your last move and Sunfish's reply, one level (game and Challenge Game)",
+   "Added Analyze mode ('e' in normal game): shows engine's suggested move and score without playing it",
+   "Split help screen into 3 context-specific screens (game / puzzle / Challenge Game), sharing a common reference section",
 }
 local GITHUB_RAW_URL = "https://raw.githubusercontent.com/borko17/sunfish.lua/main/docs/update.txt"
 
@@ -1867,73 +1865,11 @@ end
 
 -- ui.lua ======= end
 
--- help.lua =======
+-- help.lua ======= 2224
 
-function showHelp()
-   print("")
-   echoW("=== CHESS.LUA HELP ===")
-   print("")
-   echoW("COMMANDS FOR CHESS:")
-   print("-------------")
-   print("moves - Enter moves in format 'e2e4'")
-   print("'h' - Show this help screen")
-   print("'?' - Show About screen")
-   print("'d' - Toggle display mode")
-   print("    • Unicode symbols <-> Letters.")
-   print("'a' - Toggle annotations")
-   print("    • show/hide board markers.")
-   print("'s' - Save current game")
-   print("      (generate code)")
-   print("'sN' - Save position")
-   print("       after history move N")
-   print("     • e.g. 's15' saves the position")
-   print("       after move 15, even if")
-   print("       you have played further.")
-   print("'l' - Load saved game")
-   print("'nN' - Change engine node budget")
-   print("     • e.g. 'n4000'")
-   print("     • higher N = harder/slower")
-   print("     • lower N = easier/faster")
-   print("     • default: n2000")
-   print("'m' - Show move history")
-   print("'r' - Resign current game")
-   print("'n' - Start a new game")
-   print("'u' - Check sunfish.lua for updates")
-   print("'q' - Quit chess.lua")
-   print("")
-   echoW("COMMANDS FOR PUZZLE MODE:")
-   print("-------------")
-   print("'m1' - Enter Mate-in-1 puzzle mode")
-   print("'h1' - Hint: which piece type mates")
-   print("'h2' - Hint: which square to move from")
-   print("'h3' - Hint: which square to mate on")
-   print("'h4' - Full solution")
-   print("'s' - Save current puzzle")
-   print("'l' - Load saved puzzle")
-   print("'n' - Generate a new puzzle")
-   print("'d' - Toggle Unicode / letter display")
-   print("'a' - Toggle annotations")
-   print("'u' - Check sunfish.lua for updates")
-   print("'h' - Show this help screen")
-   print("'?' - Show About screen")
-   print("'q' - Leave puzzle mode")
-   print("")
-   echoW("COMMANDS FOR CHALLENGE GAME:")
-   print("-------------")
-   print("'cg' - Enter Challenge Game mode")
-   print("     • " .. CHALLENGE_MIN_PIECES .. "-" .. CHALLENGE_MAX_PIECES .. " random pieces,")
-   print("       play freely vs Sunfish,")
-   print("       no move limit")
-   print("     • shows a suggested move")
-   print("       as an on-board hint")
-   print("       to help you learn")
-   print("'th' - Toggle hints on/off")
-   print("'r' - Resign this attempt")
-   print("'n' - New position")
-   print("'q' - Leave Challenge Game mode")
-   print("")
-   print("• All other commands work the same as in a normal game (s/sN/l/m/h/a/d/u/?)")
-   print("")
+-- Common help section shared by all three modes (save formats, display modes, symbols, fonts)
+
+function showHelpCommon()
    echoW("SAVE-GAME FORMATS:")
    print("-------------")
    print("Load accepts these")
@@ -1999,7 +1935,7 @@ function showHelp()
    print("!sym! - piece delivers CHECKMATE")
    print(" sym? - piece GUARDS escape square")
    print("(sym) - piece just moved here")
-   print("'sym' - CG hint: suggested move") 
+   print("'sym' - CG hint: suggested move")
    print("      • shown on both")
    print("        the piece to move")
    print("        and its target square")
@@ -2024,8 +1960,118 @@ function showHelp()
    print("For letter mode:")
    print("• Any monospaced font")
    print("")
+end
+
+-- Help: normal game
+
+function showHelpGame()
    print("")
+   echoW("=== CHESS.LUA HELP ===")
+   print("")
+   echoW("COMMANDS FOR CHESS:")
+   print("-------------")
+   print("moves - Enter moves in format 'e2e4'")
+   print("'h' - Show this help screen")
+   print("'?' - Show About screen")
+   print("'d' - Toggle display mode")
+   print("    • Unicode symbols <-> Letters.")
+   print("'a' - Toggle annotations")
+   print("    • show/hide board markers.")
+   print("'z' - Undo your last move")
+   print("    • also undoes Sunfish's reply")
+   print("    • one level only (no re-undo)")
+   print("'e' - Analyze position")
+   print("    • shows engine's suggested move")
+   print("      and score, without playing it")
+   print("'s' - Save current game")
+   print("      (generate code)")
+   print("'sN' - Save position")
+   print("       after history move N")
+   print("     • e.g. 's15' saves the position")
+   print("       after move 15, even if")
+   print("       you have played further.")
+   print("     • 's0' saves the starting position.")
+   print("'l' - Load saved game")
+   print("'nN' - Change engine node budget")
+   print("     • e.g. 'n4000'")
+   print("     • higher N = harder/slower")
+   print("     • lower N = easier/faster")
+   print("     • default: n2000")
+   print("'m' - Show move history")
+   print("'r' - Resign current game")
+   print("'n' - Start a new game")
+   print("'u' - Check sunfish.lua for updates")
+   print("'q' - Quit chess.lua")
+   print("")
+
+   showHelpCommon()
+
    echoW("↑↑↑ CHESS.LUA HELP ↑↑↑")
+end
+
+-- Help: mate-in-1 puzzle mode
+
+function showHelpPuzzle()
+   print("")
+   echoW("=== CHESS.LUA HELP ===")
+   print("")
+   echoW("COMMANDS FOR PUZZLE MODE:")
+   print("-------------")
+   print("'m1' - Enter Mate-in-1 puzzle mode")
+   print("'h1' - Hint: which piece type mates")
+   print("'h2' - Hint: which square to move from")
+   print("'h3' - Hint: which square to mate on")
+   print("'h4' - Full solution")
+   print("'s' - Save current puzzle")
+   print("'l' - Load saved puzzle")
+   print("'n' - Generate a new puzzle")
+   print("'d' - Toggle Unicode / letter display")
+   print("'a' - Toggle annotations")
+   print("'u' - Check sunfish.lua for updates")
+   print("'h' - Show this help screen")
+   print("'?' - Show About screen")
+   print("'q' - Leave puzzle mode")
+   print("")
+
+   showHelpCommon()
+
+   echoW("↑↑↑ CHESS.LUA HELP ↑↑↑")
+end
+
+-- Help: Challenge Game mode
+
+function showHelpChallenge()
+   print("")
+   echoW("=== CHESS.LUA HELP ===")
+   print("")
+   echoW("COMMANDS FOR CHALLENGE GAME:")
+   print("-------------")
+   print("'cg' - Enter Challenge Game mode")
+   print("     • " .. CHALLENGE_MIN_PIECES .. "-" .. CHALLENGE_MAX_PIECES .. " random pieces,")
+   print("       play freely vs Sunfish,")
+   print("       no move limit")
+   print("     • shows a suggested move")
+   print("       as an on-board hint")
+   print("       to help you learn")
+   print("'th' - Toggle hints on/off")
+   print("'z' - Undo your last move")
+   print("    • also undoes Sunfish's reply")
+   print("    • one level only (no re-undo)")
+   print("'r' - Resign this attempt")
+   print("'n' - New position")
+   print("'q' - Leave Challenge Game mode")
+   print("")
+   print("• All other commands work the same as in a normal game (s/sN/l/m/h/a/d/u/?)")
+   print("")
+
+   showHelpCommon()
+
+   echoW("↑↑↑ CHESS.LUA HELP ↑↑↑")
+end
+
+-- Kept for backward-compat: some call sites may still reference the old combined name.
+function showHelp()
+   showHelpGame()
 end
 
 -- About
@@ -2076,6 +2122,8 @@ function showAbout()
    print("• Choice of Q, R, B or N on promotion")
    print("• Captured-piece tracking")
    print("• Move history and position snapshots")
+   print("• Single-level undo ('z')")
+   print("• Position analysis without playing a move ('e')")
    print("")
    echoW("SAVE / DISPLAY:")
    print("-------------")
@@ -2101,9 +2149,9 @@ function showAbout()
    echoW("↑↑↑ ABOUT SUNFISH.LUA ↑↑↑")
 end
 
--- help.lua ======= End
+-- help.lua ======= end
 
--- mate1.lua =======
+-- mate1.lua ======= 2224
 
 -- AI puzzle mode ("m1")
 
@@ -2313,7 +2361,7 @@ end
 
 if crdn == 'h' then
    print("----")
-   showHelp()
+   showHelpPuzzle()
    return false, false, board
 end
 
@@ -2512,7 +2560,7 @@ end
 
 -- mate1.lua ======= end
 
--- challenge.lua ======= 
+-- challenge.lua ======= 2224
 
 function withQuietExec(fn)
    local realExec = binding.exec
@@ -2706,6 +2754,8 @@ function playChallengeGame(board, startPos, startLastMove, startCapturedByUser,
    }
    local hintsOn = CHALLENGE_HINTS_ENABLED
    local cachedHints = nil   -- hints table for the CURRENT position, computed once per move
+-- Single-level undo snapshot: full state captured right BEFORE the player's most recent move (pre-move, pre-Sunfish-reply). 'z' restores this and clears it (no re-undo / no redo).
+   local undoSnapshot = nil
 
 -- Player's own move from two of their plies ago (skips the most recent, returns the one before). Used so findHintMove doesn't suggest undoing the move just played (e.g. after d4d3 then d3d4, don't suggest d4d3 again). Returns {from, to} or nil.
    local function findMoveTwoPliesAgo()
@@ -2786,9 +2836,36 @@ function playChallengeGame(board, startPos, startLastMove, startCapturedByUser,
             print("Captured: " .. renderCaptured(capturedByUser, blackSymbols))
             goto continue
          end
+         if crdn == 'z' then
+            print("----")
+            if not undoSnapshot then
+               echoE("Nothing to undo yet.")
+               showBoard(checkers, guards, false, false)
+            else
+               pos = undoSnapshot.pos
+               lastMove = undoSnapshot.lastMove
+               capturedByUser = undoSnapshot.capturedByUser
+               capturedByEngine = undoSnapshot.capturedByEngine
+               whiteMoves = undoSnapshot.whiteMoves
+               blackMoves = undoSnapshot.blackMoves
+               halfmoveClock = undoSnapshot.halfmoveClock
+               gameHistory = undoSnapshot.gameHistory
+               positionCounts = undoSnapshot.positionCounts
+               moveHistory = undoSnapshot.moveHistory
+               moveSnapshots[whiteMoves + 1] = nil -- drop the snapshot that pointed at the now-undone move
+               cachedHints = nil
+               undoSnapshot = nil -- one level only: no re-undo
+               echoW("Move undone.")
+               checkers = findCheckers(pos)
+               guards = findKingGuards(pos, checkers)
+               showBoard(checkers, guards, false, true)
+            end
+            print("Captured: " .. renderCaptured(capturedByUser, blackSymbols))
+            goto continue
+         end
          if crdn == 'h' then
             print("----")
-            showHelp()
+            showHelpChallenge()
             showBoard(checkers, guards, false, false)
             print("Captured: " .. renderCaptured(capturedByUser, blackSymbols))
             goto continue
@@ -2915,6 +2992,7 @@ function playChallengeGame(board, startPos, startLastMove, startCapturedByUser,
                   local nextToMove = result[8] or "b"
                   local histStr = result[9]
                   moveSnapshots = {}
+                  undoSnapshot = nil -- loading a code invalidates any pending undo
                   gameHistory, positionCounts = rebuildHistoryFromMoves(histStr, pos, board)
                   moveHistory = {}
                   if histStr and histStr ~= '-' and histStr ~= '' then
@@ -3055,6 +3133,19 @@ function playChallengeGame(board, startPos, startLastMove, startCapturedByUser,
                end
                usermove[3] = promoChar
             end
+-- Capture full pre-move state for 'z' (undo), right before this move is applied. One level only: overwrites any previous undoSnapshot.
+            undoSnapshot = {
+               pos = pos,
+               lastMove = lastMove,
+               capturedByUser = {table.unpack(capturedByUser)},
+               capturedByEngine = {table.unpack(capturedByEngine)},
+               whiteMoves = whiteMoves,
+               blackMoves = blackMoves,
+               halfmoveClock = halfmoveClock,
+               gameHistory = (function() local t = {}; for k,v in pairs(gameHistory) do t[k]=v end; return t end)(),
+               positionCounts = (function() local t = {}; for k,v in pairs(positionCounts) do t[k]=v end; return t end)(),
+               moveHistory = {table.unpack(moveHistory)},
+            }
             whiteMoves = whiteMoves + 1
             print(crdn)
             break
@@ -3249,7 +3340,7 @@ end
 
 -- challenge.lua ======= end
 
--- main.lua ======= 
+-- main.lua ======= 2224
 
 function main()
    local pos = Position.new(initial, 0, {true,true}, {true,true}, 0, 0)
@@ -3283,6 +3374,8 @@ function main()
          nextToMove = "w",
       }
    }
+-- Single-level undo snapshot: full state captured right BEFORE your most recent move (pre-move, pre-Sunfish-reply). 'z' restores this and clears it (no re-undo / no redo).
+   local undoSnapshot = nil
 
    print("")
    echoW("=== sunfish.lua ===")
@@ -3330,6 +3423,41 @@ while true do
       updateDisplayMode()
       print("----")
       echoW("Display mode: " .. (USE_UNICODE_PIECES and "Unicode" or "Letters"))
+      displayPosition(pos, lastMove, capturedByUser, capturedByEngine, blackMoves)
+   elseif crdn == 'z' then
+      print("----")
+      if not undoSnapshot then
+         echoE("Nothing to undo yet.")
+      else
+         pos = undoSnapshot.pos
+         lastMove = undoSnapshot.lastMove
+         capturedByUser = undoSnapshot.capturedByUser
+         capturedByEngine = undoSnapshot.capturedByEngine
+         whiteMoves = undoSnapshot.whiteMoves
+         blackMoves = undoSnapshot.blackMoves
+         halfmoveClock = undoSnapshot.halfmoveClock
+         gameHistory = undoSnapshot.gameHistory
+         positionCounts = undoSnapshot.positionCounts
+         moveHistory = undoSnapshot.moveHistory
+         moveSnapshots[whiteMoves + 1] = nil -- drop the snapshot that pointed at the now-undone move
+         undoSnapshot = nil -- one level only: no re-undo
+         echoW("Move undone.")
+      end
+      print("")
+      displayPosition(pos, lastMove, capturedByUser, capturedByEngine, blackMoves)
+   elseif crdn == 'e' then
+      print("----")
+      echoW("Analyzing position...")
+      local analyzeMove, analyzeScore, analyzeDepth, analyzeNodes, analyzeElapsed = search(pos, NODES_SEARCHED, gameHistory)
+      if analyzeMove and isLegalMove(pos, analyzeMove) then
+         echoW("Suggested move: " .. render(analyzeMove[1]) .. render(analyzeMove[2]) .. " (score: " .. analyzeScore .. ")")
+      else
+         echoE("No suggestion available (checkmate or stalemate).")
+      end
+      if PROFILE_PRINT_ENABLED then
+         printProfile(analyzeElapsed, analyzeDepth, analyzeNodes)
+      end
+      print("")
       displayPosition(pos, lastMove, capturedByUser, capturedByEngine, blackMoves)
       elseif crdn:match('^n%d+$') then
    local n = tonumber(crdn:match('^n(%d+)$'))
@@ -3415,6 +3543,7 @@ while true do
          local nextToMove = result[8] or "b"
          local histStr = result[9]
          moveSnapshots = {}
+         undoSnapshot = nil -- loading a code invalidates any pending undo
 
 -- Tracks where this (loaded) game actually started, so replay below - and future saves - use the real starting point rather than always the standard setup. If the code has no explicit start but also no history, the loaded board itself is the start; otherwise fall back to standard (best-effort for old codes missing both fields).
          if result[10] then
@@ -3475,6 +3604,9 @@ while true do
             echoW("🐠 Sunfish is thinking...")
 enginemove, score, reachedDepth, usedNodes, elapsed = search(pos, NODES_SEARCHED, gameHistory)
 assert(score)
+            if PROFILE_PRINT_ENABLED then
+               printProfile(elapsed, reachedDepth, usedNodes)
+            end
             if enginemove and not isLegalMove(rotated, enginemove) then
                enginemove = nil
             end
@@ -3550,7 +3682,7 @@ print("Captured: " .. renderCaptured(capturedByUser, blackSymbols))
       return main()
    elseif crdn == 'h' then
        print("----")
-      showHelp()
+      showHelpGame()
       displayPosition(pos, lastMove, capturedByUser, capturedByEngine, blackMoves)
    elseif crdn == '?' then
        print("----")
@@ -3559,6 +3691,11 @@ print("Captured: " .. renderCaptured(capturedByUser, blackSymbols))
    elseif crdn == 'm1' then
       aipuzMate1()
       echoW("Resuming the game.")
+      displayPosition(pos, lastMove, capturedByUser, capturedByEngine, blackMoves)
+   elseif crdn == 'deb1' then
+       print("----")
+      runAutoDebugGames(AUTO_DEBUG_GAMES)
+      binding.exec("echo -w " .. "Resuming the game.")
       displayPosition(pos, lastMove, capturedByUser, capturedByEngine, blackMoves)
    elseif crdn == 'cg' then
       challengeMode()
@@ -3590,6 +3727,19 @@ print("Captured: " .. renderCaptured(capturedByUser, blackSymbols))
             end
             usermove[3] = promoChar -- ttfind() already auto-filled usermove[3] with 'Q'; overwrite with player's actual choice
          end
+-- Capture full pre-move state for 'z' (undo), right before this move is applied. One level only: overwrites any previous undoSnapshot.
+ undoSnapshot = {
+    pos = pos,
+    lastMove = lastMove,
+    capturedByUser = {table.unpack(capturedByUser)},
+    capturedByEngine = {table.unpack(capturedByEngine)},
+    whiteMoves = whiteMoves,
+    blackMoves = blackMoves,
+    halfmoveClock = halfmoveClock,
+    gameHistory = (function() local t = {}; for k,v in pairs(gameHistory) do t[k]=v end; return t end)(),
+    positionCounts = (function() local t = {}; for k,v in pairs(positionCounts) do t[k]=v end; return t end)(),
+    moveHistory = {table.unpack(moveHistory)},
+ }
  whiteMoves = whiteMoves + 1
 print(crdn .. " (" .. math.floor(inputElapsed + 0.5) .. "s)")
 break
@@ -3678,6 +3828,9 @@ end
       echoW("🐠 Sunfish is thinking...")
 enginemove, score, reachedDepth, usedNodes, elapsed = search(pos, NODES_SEARCHED, gameHistory)
 assert(score)
+      if PROFILE_PRINT_ENABLED then
+         printProfile(elapsed, reachedDepth, usedNodes)
+      end
       if score <= -MATE_UPPER then
          echoS("Checkmate in " .. whiteMoves .. " moves for White!")
          echoS("You won!")
