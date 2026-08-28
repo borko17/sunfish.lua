@@ -107,20 +107,14 @@ while true do
       print("----")
       echoW("Analyzing position...")
       local analyzeMove, analyzeScore, analyzeDepth, analyzeNodes, analyzeElapsed = search(pos, NODES_SEARCHED, gameHistory)
--- Stash under the same globals 'pp' reads, so profiling reflects THIS analysis rather than the last real move's search.
-      elapsed = analyzeElapsed
-      reachedDepth = analyzeDepth
-      usedNodes = analyzeNodes
       if analyzeMove and isLegalMove(pos, analyzeMove) then
          echoW("Suggested move: " .. render(analyzeMove[1]) .. render(analyzeMove[2]) .. " (score: " .. analyzeScore .. ")")
       else
          echoE("No suggestion available (checkmate or stalemate).")
       end
-      print("")
-      displayPosition(pos, lastMove, capturedByUser, capturedByEngine, blackMoves)
-   elseif crdn == 'pp' then
-      print("----")
-      printProfile()
+      if PROFILE_PRINT_ENABLED then
+         printProfile(analyzeElapsed, analyzeDepth, analyzeNodes)
+      end
       print("")
       displayPosition(pos, lastMove, capturedByUser, capturedByEngine, blackMoves)
       elseif crdn:match('^n%d+$') then
@@ -268,6 +262,9 @@ while true do
             echoW("🐠 Sunfish is thinking...")
 enginemove, score, reachedDepth, usedNodes, elapsed = search(pos, NODES_SEARCHED, gameHistory)
 assert(score)
+            if PROFILE_PRINT_ENABLED then
+               printProfile(elapsed, reachedDepth, usedNodes)
+            end
             if enginemove and not isLegalMove(rotated, enginemove) then
                enginemove = nil
             end
@@ -489,6 +486,9 @@ end
       echoW("🐠 Sunfish is thinking...")
 enginemove, score, reachedDepth, usedNodes, elapsed = search(pos, NODES_SEARCHED, gameHistory)
 assert(score)
+      if PROFILE_PRINT_ENABLED then
+         printProfile(elapsed, reachedDepth, usedNodes)
+      end
       if score <= -MATE_UPPER then
          echoS("Checkmate in " .. whiteMoves .. " moves for White!")
          echoS("You won!")
