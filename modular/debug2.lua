@@ -16,8 +16,18 @@ if PROFILE_PRINT_ENABLED == nil then
    PROFILE_PRINT_ENABLED = true -- fallback if not set in loader.lua CONFIG
 end
 
--- elapsedArg/depthArg/nodesArg are the return values of the specific
--- search() call just made (works the same for a real move or 'e' Analyze).
+-------------------------------------------------------------------------------
+-- Zaokruživanje na 2 decimale
+-------------------------------------------------------------------------------
+
+local function round2(n)
+   return math.floor(n * 100 + 0.5) / 100
+end
+
+-------------------------------------------------------------------------------
+-- Ispis profila
+-------------------------------------------------------------------------------
+
 function printProfile(elapsedArg, depthArg, nodesArg)
    if not elapsedArg then
       return
@@ -30,8 +40,29 @@ function printProfile(elapsedArg, depthArg, nodesArg)
    local tpTime = PROFILE_tp_time or 0
    local tpCalls = PROFILE_tp_calls or 0
 
+   ---------------------------------------------------------------------------
+   -- Vrijeme koje nije obuhvaćeno genMoves, move i transposition tabelom
+   ---------------------------------------------------------------------------
+
    local other = elapsedArg - genMovesTime - moveTime - tpTime
-   if other < 0 then other = 0 end -- os.clock() rounding can nudge this slightly negative
+
+   if other < 0 then
+      other = 0
+   end
+
+   ---------------------------------------------------------------------------
+   -- Zaokruži sva vremena na 2 decimale
+   ---------------------------------------------------------------------------
+
+   genMovesTime = round2(genMovesTime)
+   moveTime = round2(moveTime)
+   tpTime = round2(tpTime)
+   other = round2(other)
+   elapsedArg = round2(elapsedArg)
+
+   ---------------------------------------------------------------------------
+   -- Ispis
+   ---------------------------------------------------------------------------
 
    print(string.format(
       "[profile] genMoves: %.2fs/%d | move: %.2fs/%d | tp: %.2fs/%d | other: %.2fs | total: %.2fs | depth: %s | nodes: %s",
