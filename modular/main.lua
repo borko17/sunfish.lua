@@ -349,6 +349,11 @@ print("Captured: " .. renderCaptured(capturedByUser, blackSymbols))
       runAutoDebugGames(AUTO_DEBUG_GAMES)
       binding.exec("echo -w " .. "Resuming the game.")
       displayPosition(pos, lastMove, capturedByUser, capturedByEngine, blackMoves)
+elseif crdn == 'deb2' then
+      print("----")
+      printProfile()
+      print("")
+      displayPosition(pos, lastMove, capturedByUser, capturedByEngine, blackMoves)
    elseif crdn == 'cg' then
       challengeMode()
       echoW("Resuming the game.")
