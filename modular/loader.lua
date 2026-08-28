@@ -29,7 +29,7 @@ MATE_UPPER = 60000 + (10 * 2529) -- search() scores mate near this, not MATE_VAL
 
 
 local BASE_URL = "https://raw.githubusercontent.com/borko17/sunfish.lua/main/modular/"
-local PARTS = {"core.lua", "search.lua", "ui.lua", "help.lua", "mate1.lua", "challenge.lua", "debug.lua", "main.lua"}
+local PARTS = {"core.lua", "search.lua", "ui.lua", "help.lua", "mate1.lua", "challenge.lua", "debug.lua", "debug2.lua", "main.lua"}
 local MANIFEST_NAME = "manifest.txt" -- fetched alongside the parts below, but it's plain text (not Lua) - kept raw in MANIFEST_CONTENT for checkForUpdate() to read, not load()ed as code
 
 local function fetchURL(url)
