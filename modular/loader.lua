@@ -1,7 +1,21 @@
+-- loader.lua =======
+
+-- sunfish.lua bootstrap loader
+-- This is the ONLY file you paste into Yantra's `scripts` editor.
+-- Every /run downloads the LATEST core.lua, search.lua, ui.lua, help.lua,
+-- mate1.lua, challenge.lua, main.lua from GitHub (in that order), load()s
+-- each one into this same script's global scope, then runs main().
+--
+-- Because every run always fetches fresh code, you are always on the latest
+-- version already. The in-game 'u' command (defined in core.lua) just checks
+-- the manifest and reports the version/changelog -- any newer version takes
+-- effect the next time you run this loader, not live during the current game.
+
+
 -- CONFIG: Options at the top
+--------------------
 USE_UNICODE_PIECES = false
 SHOW_ANNOTATIONS = true
-
 CHALLENGE_MIN_PIECES = 10
 CHALLENGE_MAX_PIECES = 20
 CHALLENGE_GEN_ATTEMPTS = 400
@@ -9,23 +23,13 @@ CHALLENGE_HINTS_ENABLED = false -- shows suggested move; toggle with 'th'
 NODES_SEARCHED = 2000 -- node budget/search; soft limit, checked only between depths
 CHALLENGE_ENGINE_NODES = 600 -- separate, weaker budget for Sunfish's replies in Challenge mode
 TABLE_SIZE = NODES_SEARCHED * 25 -- scaled off NODES_SEARCHED so it doesn't thrash; upstream's 1e6 too heavy for Luaj-jse on phone
-PROFILE_PRINT_ENABLED = false -- true = auto-print search() profiling after every Sunfish move and 'e' (Analyze); see debug2.lua
+MATE_VALUE = 30000 -- exceeds 8*queen+2*(rook+knight+bishop); king value is double this
+MATE_UPPER = 60000 + (10 * 2529) -- search() scores mate near this, not MATE_VALUE - callers must match
+--------------------
 
--- sunfish.lua bootstrap loader
--- This is the ONLY file you paste into Yantra's `scripts` editor.
--- Every /run downloads parts.lua first (which lists every other file to
--- load, in order), then downloads and load()s each of those files into
--- this same script's global scope, then runs main().
---
--- Because every run always fetches fresh code, you are always on the latest
--- version already. The in-game 'u' command (defined in core.lua) just checks
--- the manifest and reports the version/changelog -- any newer version takes
--- effect the next time you run this loader, not live during the current game.
--- Adding/removing/reordering files only requires editing parts.lua on
--- GitHub -- this loader itself never needs to change for that.
 
 local BASE_URL = "https://raw.githubusercontent.com/borko17/sunfish.lua/main/modular/"
-local PARTS_FILE = "parts.lua"
+local PARTS = {"core.lua", "search.lua", "ui.lua", "help.lua", "mate1.lua", "challenge.lua", "debug.lua", "main.lua"}
 local MANIFEST_NAME = "manifest.txt" -- fetched alongside the parts below, but it's plain text (not Lua) - kept raw in MANIFEST_CONTENT for checkForUpdate() to read, not load()ed as code
 
 local function fetchURL(url)
@@ -64,32 +68,6 @@ if not MANIFEST_CONTENT or MANIFEST_CONTENT == '' then
    return
 end
 
--- Fetch parts.lua first and run it: it just sets a global PARTS = {...} list.
--- This has to be fetched and executed on its own, before the main load loop
--- below, since that loop needs PARTS to know what else to download.
-local partsContent = fetchURL(BASE_URL .. PARTS_FILE)
-if not partsContent or partsContent == '' then
-   echoErr("Failed to download " .. PARTS_FILE .. ". Check your connection and try again.")
-   return
-end
-
-local partsChunk, partsErr = load(partsContent, PARTS_FILE)
-if not partsChunk then
-   echoErr("Syntax error in " .. PARTS_FILE .. ": " .. tostring(partsErr))
-   return
-end
-
-local partsOk, partsRunErr = pcall(partsChunk)
-if not partsOk then
-   echoErr("Error running " .. PARTS_FILE .. ": " .. tostring(partsRunErr))
-   return
-end
-
-if not PARTS or #PARTS == 0 then
-   echoErr(PARTS_FILE .. " did not define a valid PARTS list.")
-   return
-end
-
 local chunks = {}
 
 for _, partName in ipairs(PARTS) do
@@ -117,5 +95,86 @@ for _, part in ipairs(chunks) do
    end
 end
 
+-- Console output helpers (wrap binding.exec("echo -X " .. msg) calls for readability)
+function echoE(msg) binding.exec("echo -e " .. msg) end -- error
+function echoS(msg) binding.exec("echo -s " .. msg) end -- success
+function echoW(msg) binding.exec("echo -w " .. msg) end -- warning/heading
+
+-- Update info
+-- loader.lua fetches manifest.txt once at startup (alongside the 7 code parts)
+-- and stores its raw text in the global MANIFEST_CONTENT. checkForUpdate() below
+-- just reads that instead of fetching it again over the network.
+
+-- Low-level GET, same java.net.URL / BufferedReader approach already proven to work
+-- from the original single-file checkForUpdate().
+function fetchURL(url)
+   local ok, result = pcall(function()
+      local URL = luajava.bindClass("java.net.URL")
+      local u = URL.new(url)
+      local conn = u:openConnection()
+      conn:setConnectTimeout(8000)
+      conn:setReadTimeout(8000)
+      conn:setRequestMethod("GET")
+
+      local BufferedReader = luajava.bindClass("java.io.BufferedReader")
+      local InputStreamReader = luajava.bindClass("java.io.InputStreamReader")
+      local reader = BufferedReader.new(InputStreamReader.new(conn:getInputStream()))
+
+      local sb = {}
+      local line = reader:readLine()
+      while line ~= nil do
+         table.insert(sb, line)
+         line = reader:readLine()
+      end
+      reader:close()
+      return table.concat(sb, "\n")
+   end)
+   if ok then return result end
+   return nil
+end
+
+-- Extracts CHANGELOG table from raw manifest text (list of quoted strings inside CHANGELOG = { ... })
+function parseChangelog(text)
+   local body = text:match('CHANGELOG%s*=%s*{(.-)}')
+   if not body then return nil end
+   local list = {}
+   for entry in body:gmatch('"(.-)"') do
+      table.insert(list, entry)
+   end
+   if #list == 0 then return nil end
+   return list
+end
+
+function printChangelog(list, versionLabel)
+   print("")
+   print("What's new in v" .. versionLabel .. ":")
+   for _, line in ipairs(list) do
+      print("• " .. line)
+   end
+end
+
+function checkForUpdate()
+   local result = MANIFEST_CONTENT
+
+   if not result or result == '' then
+      echoE("Manifest not available (failed to download at startup).")
+      return
+   end
+
+   local remoteVersion = result:match('SCRIPT_VERSION%s*=%s*"([%d%.]+)"')
+   if not remoteVersion then
+      echoE("Could not find a version number in the manifest.")
+      return
+   end
+
+   echoS("Running version: " .. remoteVersion)
+   local remoteChangelog = parseChangelog(result)
+   if remoteChangelog then
+      printChangelog(remoteChangelog, remoteVersion)
+   end
+end
+
 math.randomseed(os.time())
 main()
+
+-- loader.lua ======= end
