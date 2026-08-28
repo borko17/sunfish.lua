@@ -1,4 +1,4 @@
--- ui.lua ======= 2045
+-- ui.lua =======
 
 function updateDisplayMode()
    whiteSymbols = USE_UNICODE_PIECES and whiteSymbols_unicode or whiteSymbols_letters
@@ -674,7 +674,7 @@ function rebuildHistoryFromMoves(histStr, fallbackPos, startBoard)
 end
 
 
-function displayPosition(pos, lastMove, capturedByUser, capturedByEngine, blackMoves, hintsOn, gameHistory)
+function displayPosition(pos, lastMove, capturedByUser, capturedByEngine, blackMoves)
    if lastMove then
       local moveLabel = blackMoves and (blackMoves .. ". ") or ""
       print("Sunfish " .. moveLabel .. "move: \n" .. render(lastMove[1]) .. render(lastMove[2]))
@@ -686,12 +686,7 @@ function displayPosition(pos, lastMove, capturedByUser, capturedByEngine, blackM
    if next(checkers) and not isMate then
       echoS("Check!")
    end
-   local hints = nil
-   if hintsOn and not isMate then
-      local hintMove = findHintMove(pos, gameHistory or {}, nil)
-      hints = buildHintDisplay(hintMove)
-   end
-   printboard(arrayToBoard(pos.board), lastMove, checkers, guards, isMate, hints)
+   printboard(arrayToBoard(pos.board), lastMove, checkers, guards, isMate)
    print("Captured: " .. renderCaptured(capturedByUser, blackSymbols))
 end
 

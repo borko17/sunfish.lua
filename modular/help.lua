@@ -1,4 +1,4 @@
--- help.lua ======= 2045
+-- help.lua ======= 2224
 
 -- Common help section shared by all three modes (save formats, display modes, symbols, fonts)
 
@@ -113,9 +113,9 @@ function showHelpGame()
    print("'z' - Undo your last move")
    print("    • also undoes Sunfish's reply")
    print("    • one level only (no re-undo)")
-   print("'th' - Toggle hints on/off")
+   print("'e' - Analyze position")
    print("    • shows engine's suggested move")
-   print("      as an on-board hint")
+   print("      and score, without playing it")
    print("'s' - Save current game")
    print("      (generate code)")
    print("'sN' - Save position")
@@ -256,7 +256,7 @@ function showAbout()
    print("• Captured-piece tracking")
    print("• Move history and position snapshots")
    print("• Single-level undo ('z')")
-   print("• On-board move hints, toggleable ('th')")
+   print("• Position analysis without playing a move ('e')")
    print("")
    echoW("SAVE / DISPLAY:")
    print("-------------")
