@@ -106,12 +106,21 @@ while true do
    elseif crdn == 'e' then
       print("----")
       echoW("Analyzing position...")
-      local analyzeMove, analyzeScore = search(pos, NODES_SEARCHED, gameHistory)
+      local analyzeMove, analyzeScore, analyzeDepth, analyzeNodes, analyzeElapsed = search(pos, NODES_SEARCHED, gameHistory)
+-- Stash under the same globals 'pp' reads, so profiling reflects THIS analysis rather than the last real move's search.
+      elapsed = analyzeElapsed
+      reachedDepth = analyzeDepth
+      usedNodes = analyzeNodes
       if analyzeMove and isLegalMove(pos, analyzeMove) then
          echoW("Suggested move: " .. render(analyzeMove[1]) .. render(analyzeMove[2]) .. " (score: " .. analyzeScore .. ")")
       else
          echoE("No suggestion available (checkmate or stalemate).")
       end
+      print("")
+      displayPosition(pos, lastMove, capturedByUser, capturedByEngine, blackMoves)
+   elseif crdn == 'pp' then
+      print("----")
+      printProfile()
       print("")
       displayPosition(pos, lastMove, capturedByUser, capturedByEngine, blackMoves)
       elseif crdn:match('^n%d+$') then
@@ -348,11 +357,6 @@ print("Captured: " .. renderCaptured(capturedByUser, blackSymbols))
        print("----")
       runAutoDebugGames(AUTO_DEBUG_GAMES)
       binding.exec("echo -w " .. "Resuming the game.")
-      displayPosition(pos, lastMove, capturedByUser, capturedByEngine, blackMoves)
-elseif crdn == 'deb2' then
-      print("----")
-      printProfile()
-      print("")
       displayPosition(pos, lastMove, capturedByUser, capturedByEngine, blackMoves)
    elseif crdn == 'cg' then
       challengeMode()
