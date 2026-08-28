@@ -37,7 +37,7 @@ local PARTS = {
 "mate1.lua", 
 "challenge.lua", 
 --"debug.lua", 
---"debug2.lua"
+--"debug2.lua",
 "main.lua"
 }
 local MANIFEST_NAME = "manifest.txt" -- fetched alongside the parts below, but it's plain text (not Lua) - kept raw in MANIFEST_CONTENT for checkForUpdate() to read, not load()ed as code
