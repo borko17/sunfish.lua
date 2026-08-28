@@ -1,24 +1,25 @@
 -- debug2.lua =======
 
 -------------------------------------------------------------------------------
--- Debug: search() profiling breakdown ("pp")
+-- Debug: search() profiling breakdown
 -- search.lua already accumulates PROFILE_genMoves_time/calls,
 -- PROFILE_move_time/calls, and PROFILE_tp_time/calls into globals during
--- every search() call (reset to 0 at the start of each search). This file
--- just prints them, on demand, instead of after every single move.
+-- every search() call (reset to 0 at the start of each search).
 --
--- 'elapsed', 'enginemove', 'score', 'reachedDepth', 'usedNodes' are the
--- globals main.lua already assigns (no 'local') right after each Sunfish
--- move's search() call, so this reads the profile of the LAST search that
--- populated them - normally Sunfish's most recent move. If 'e' (Analyze)
--- was used most recently, those globals still reflect the last real move's
--- search, not the analysis (Analyze uses a local search() call) - printProfile()
--- notes this so the numbers aren't misread as the analysis's own profile.
+-- Controlled entirely by the PROFILE_PRINT_ENABLED constant below (set in
+-- loader.lua's CONFIG section, or here as a fallback default) - no in-game
+-- command. When true, main.lua prints this automatically right after every
+-- search() call: your normal moves' Sunfish replies, and 'e' (Analyze).
 -------------------------------------------------------------------------------
 
-function printProfile()
-   if not elapsed then
-      echoE("No search has run yet this game.")
+if PROFILE_PRINT_ENABLED == nil then
+   PROFILE_PRINT_ENABLED = false -- fallback if not set in loader.lua CONFIG
+end
+
+-- elapsedArg/depthArg/nodesArg are the return values of the specific
+-- search() call just made (works the same for a real move or 'e' Analyze).
+function printProfile(elapsedArg, depthArg, nodesArg)
+   if not elapsedArg then
       return
    end
 
@@ -29,22 +30,19 @@ function printProfile()
    local tpTime = PROFILE_tp_time or 0
    local tpCalls = PROFILE_tp_calls or 0
 
-   local other = elapsed - genMovesTime - moveTime - tpTime
+   local other = elapsedArg - genMovesTime - moveTime - tpTime
    if other < 0 then other = 0 end -- os.clock() rounding can nudge this slightly negative
 
-   echoW("=== SEARCH PROFILE (last move's search) ===")
    print(string.format(
-      "[profile] genMoves: %.3fs/%d | move: %.3fs/%d | tp: %.3fs/%d | other: %.3fs | total: %.3fs",
+      "[profile] genMoves: %.3fs/%d | move: %.3fs/%d | tp: %.3fs/%d | other: %.3fs | total: %.3fs | depth: %s | nodes: %s",
       genMovesTime, genMovesCalls,
       moveTime, moveCalls,
       tpTime, tpCalls,
       other,
-      elapsed
+      elapsedArg,
+      tostring(depthArg or "?"),
+      tostring(nodesArg or "?")
    ))
-   if reachedDepth then
-      print("depth reached: " .. reachedDepth .. "  nodes: " .. (usedNodes or nodes or 0))
-   end
-   print("Note: reflects the last actual move's search, not 'e' (Analyze), which searches locally.")
 end
 
 -- debug2.lua ======= end
