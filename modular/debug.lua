@@ -1,4 +1,5 @@
--------------------------------------------------------------------------------
+-- debug.lua =======
+
 -- Debug: automatic Challenge Game games ("abcd")
 -- Plays N Challenge Game games with NO user input: White always plays the
 -- on-board hint move (findHintMove), Black is Sunfish at
@@ -156,3 +157,4 @@ function runAutoDebugGames(n)
    binding.exec("echo -w " .. "=== RESULT: " .. wins .. "W / " .. losses .. "L out of " .. n .. " games ===")
    print("")
 end
+-- debug.lua ======= end
