@@ -1,4 +1,4 @@
--- core.lua ======= 
+-- core.lua ======= 1131
 
 A1, H1, A8, H8 = 91, 98, 21, 28 -- board is a 120-char padded string for cheap off-board checks
 initial =
@@ -676,7 +676,13 @@ end
 nodes = 0 -- module-scoped: shared by search()'s loop and the inner bound() closure
 
 -- Quiescence value floor: deeper nodes admit slightly weaker captures/threats before cutting off
-QS = 40
-QS_A = 140
+QS = 36
+QS_A = 180
+
+-- Late Move Reduction threshold: quiet moves worth less than this get searched at reduced depth (guard-gated, depth>=7)
+LMR = 70
+
+-- Target margin for the deep null-move "fuel probe" (depth >= 6): pass must beat pos.score + NULL_MARGIN
+NULL_MARGIN = -200
 
 -- core.lua ======= end
