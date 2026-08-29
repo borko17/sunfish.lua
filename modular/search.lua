@@ -1,4 +1,4 @@
--- search.lua ======= 1131
+-- search.lua ======= 1151
 
 function search(pos, maxn, history)
    maxn = maxn or NODES_SEARCHED
