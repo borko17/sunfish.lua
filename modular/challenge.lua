@@ -1,4 +1,4 @@
--- challenge.lua ======= 2224
+-- challenge.lua ======= 1151
 
 function withQuietExec(fn)
    local realExec = binding.exec
@@ -67,7 +67,7 @@ function buildHintDisplay(move)
 end
 
 -- How many EXTRA pieces White gets over Black when generating a Challenge position (on top of the ~55-70% split). 0 = no extra bonus.
-CHALLENGE_WHITE_EXTRA_PIECES = 2
+CHALLENGE_WHITE_EXTRA_PIECES = 1
 
 -- Random "legal-looking" position: both kings + a spread of extra pieces (White gets a material edge for a realistic mate within the move budget). Unlike genAiMateIn1(), no immediate forced mate is required.
 function genChallengePosition()
@@ -95,8 +95,8 @@ function genChallengePosition()
       local totalExtra = totalPieces - 2  -- minus both kings
       if totalExtra < 1 then totalExtra = 1 end
 
--- White gets ~55-70% of the extra pieces (winnable, but not overloaded); CHALLENGE_WHITE_EXTRA_PIECES adds more, shrinking Black's where possible.
-      local numWhiteExtra = math.max(1, math.floor(totalExtra * (0.55 + math.random() * 0.15)))
+-- White gets ~52-62% of the extra pieces (winnable, but not overloaded); CHALLENGE_WHITE_EXTRA_PIECES adds more, shrinking Black's where possible.
+      local numWhiteExtra = math.max(1, math.floor(totalExtra * (0.52 + math.random() * 0.10)))
       local numBlackExtra = math.max(0, totalExtra - numWhiteExtra)
 
       if CHALLENGE_WHITE_EXTRA_PIECES > 0 then
