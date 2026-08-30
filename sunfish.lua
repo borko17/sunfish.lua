@@ -23,11 +23,10 @@ local function echoS(msg) binding.exec("echo -s " .. msg) end -- success
 local function echoW(msg) binding.exec("echo -w " .. msg) end -- warning/heading
 
 -- Update
-local SCRIPT_VERSION = "2.608272224"
+local SCRIPT_VERSION = "2.608291151"
 local CHANGELOG = {
-   "Added Undo ('z'): undoes your last move and Sunfish's reply, one level (game and Challenge Game)",
-   "Added Analyze mode ('e' in normal game): shows engine's suggested move and score without playing it",
-   "Split help screen into 3 context-specific screens (game / puzzle / Challenge Game), sharing a common reference section",
+   "Ported search() to upstream Sunfish 2026: two-tier null-move (short guard + deep fuel probe), Late Move Reductions (LMR) for weak quiet moves at depth>=7, depth-aware futility ceiling, mate-distance scoring so the engine prefers the fastest mate and delays the slowest (QS/QS_A retuned to 36/180)",
+   "Challenge Game: narrowed White's material edge (extra-piece split 55-70% -> 52-62%, fixed bonus 2 -> 1) so Black starts closer to even without erasing White's advantage",
 }
 local GITHUB_RAW_URL = "https://raw.githubusercontent.com/borko17/sunfish.lua/main/docs/update.txt"
 
@@ -109,7 +108,7 @@ local function checkForUpdate()
    end
 end
 
--- core.lua ======= 
+-- core.lua ======= 1151
 
 A1, H1, A8, H8 = 91, 98, 21, 28 -- board is a 120-char padded string for cheap off-board checks
 initial =
@@ -787,12 +786,18 @@ end
 nodes = 0 -- module-scoped: shared by search()'s loop and the inner bound() closure
 
 -- Quiescence value floor: deeper nodes admit slightly weaker captures/threats before cutting off
-QS = 40
-QS_A = 140
+QS = 36
+QS_A = 180
+
+-- Late Move Reduction threshold: quiet moves worth less than this get searched at reduced depth (guard-gated, depth>=7)
+LMR = 70
+
+-- Target margin for the deep null-move "fuel probe" (depth >= 6): pass must beat pos.score + NULL_MARGIN
+NULL_MARGIN = -200
 
 -- core.lua ======= end
 
--- search.lua =======
+-- search.lua ======= 1151
 
 function search(pos, maxn, history)
    maxn = maxn or NODES_SEARCHED
@@ -872,40 +877,28 @@ function search(pos, maxn, history)
       local bestMove = nil
       local live = false
 
-      -- Null-move pruning: not root, depth > 2, eval near equality, major/minor piece remains
-      if not root
-         and depth > 2
-         and math.abs(p.score) < 500
-         and hasMajorOrMinorPiece(p.board) then
+      -- "calm" position: no side is deep in a mating attack and at least one
+      -- major/minor piece remains on the board (avoids zugzwang in K+P endings)
+      local calm = math.abs(p.score) < 750 and hasMajorOrMinorPiece(p.board)
+      local guard = (not root) and calm
 
-         local nullScore = math.min(
-            p.score + EVAL_ROUGHNESS,
-            -bound(
-               p:rotate(true),
-               1 - gamma,
-               depth - 3,
-               false
-            )
-         )
-
-         best = nullScore
-
-         if nullScore >= gamma then
-            local proof = killer or p:kingCapture()
-
-            if proof and p:value(proof) >= MATE_LOWER then
-               best = MATE_UPPER
-               bestMove = proof
-            else
-               return best
-            end
+      -- Futility ceiling for a move worth `val`: capped at MATE_UPPER once
+      -- depth is deep enough or the move itself is already mate-band;
+      -- otherwise a static estimate scaled by remaining depth (QS_A).
+      local function ceiling(val)
+         if depth > 4 or val >= MATE_LOWER then
+            return MATE_UPPER
          end
+         return p.score + val + math.max(depth - 1, 0) * QS_A
       end
 
-      if depth == 0 then
-         if p.score > best then
-            best = p.score
-         end
+      -- Deep null-move "fuel probe" (depth >= 6): passing must beat
+      -- pos.score + NULL_MARGIN by a two-ply-reduced search to count.
+      local nmr = false
+      if calm and depth >= 6 then
+         local t = p.score + NULL_MARGIN
+         local probe = -bound(p:rotate(true), 1 - t, depth - 7, false)
+         nmr = probe >= t
       end
 
       if killer == nil and depth > 2 then
@@ -922,97 +915,103 @@ function search(pos, maxn, history)
 
       local valLower = QS - depth * QS_A
 
-      if killer and p:value(killer) >= valLower then
-         local childScore = -bound(
-            p:move(killer),
-            1 - gamma,
-            depth - 1,
-            false
-         )
-
-         if childScore > best then
-            best = childScore
-            bestMove = killer
-         end
-
-         if childScore > -MATE_UPPER then
-            live = true
-         end
-
-         if best >= gamma then
-            if depth > 0 then
-               tp_set(
-                  p,
-                  depth,
-                  true,
-                  best,
-                  storedBound and storedBound.upper or MATE_UPPER,
-                  killer
-               )
-            end
-
-            return best
-         end
-      end
-
+      -- Collect candidate moves in evaluation order (short null included).
       local ordered = {}
 
-      for _, move in ipairs(p:genMoves()) do
-         local val = p:value(move)
-
-         if val >= valLower then
-            table.insert(ordered, {
-               value = val,
-               move = move
-            })
-         end
+      -- Short null-move: only offered as a candidate inside the move loop
+      -- (not a separate early-return block), guard-gated, depth in (2,6)
+      if guard and depth > 2 and depth < 6 then
+         table.insert(ordered, { isNull = true })
       end
 
-      table.sort(ordered, function(a, b)
-         return a.value > b.value
-      end)
+      if depth == 0 then
+         table.insert(ordered, { isNull = true, qsStandPat = true })
+      end
+
+      if killer and (p:value(killer) >= valLower or depth > 0) and ceiling(p:value(killer)) >= gamma then
+         table.insert(ordered, { value = p:value(killer), move = killer })
+      end
+
+      local genned = {}
+      for _, move in ipairs(p:genMoves()) do
+         local val = p:value(move)
+         if val >= valLower or depth > 0 then
+            table.insert(genned, { value = val, move = move })
+         end
+      end
+      table.sort(genned, function(a, b) return a.value > b.value end)
+      for _, item in ipairs(genned) do
+         table.insert(ordered, item)
+      end
 
       for _, item in ipairs(ordered) do
-         local move = item.move
-         local val = item.value
+         local score
 
-         if depth <= 1 and p.score + val < gamma then
-            local futilityScore
-
-            if val >= MATE_LOWER then
-               futilityScore = MATE_UPPER
+         if item.isNull then
+            if item.qsStandPat then
+               score = p.score
             else
-               futilityScore = p.score + val
+               -- Cap the pass at static eval + one EVAL_ROUGHNESS bucket so
+               -- it stays monotone and below the positive mate band.
+               local cap = p.score + EVAL_ROUGHNESS
+               if cap >= gamma then
+                  score = math.min(cap, -bound(p:rotate(true), 1 - gamma, depth - 4, false))
+                  if score >= gamma then
+                     local proof = p:kingCapture()
+                     if proof then
+                        item.move = proof
+                        score = MATE_UPPER
+                        live = true
+                     end
+                  end
+               else
+                  score = cap
+               end
             end
-
-            if futilityScore > best then
-               best = futilityScore
-            end
-
-            break -- ordered by value: nothing later can improve it
-         end
-
-         local childScore = -bound(
-            p:move(move),
-            1 - gamma,
-            depth - 1,
-            false
-         )
-
-         if childScore > best then
-            best = childScore
-            bestMove = move
-         end
-
-         if childScore > -MATE_UPPER then
+         elseif item.value >= MATE_LOWER then
+            -- Intrinsic mate-band move: exact MATE_UPPER, never searched.
+            score = MATE_UPPER
             live = true
+         else
+            local cap = ceiling(item.value)
+            if cap < gamma then
+               -- Futility cutoff: sorted stream means nothing after this can improve it.
+               if cap > best then best = cap end
+               break
+            end
+
+            local reduced = 0
+            if guard and depth >= 7 and item.value < LMR then
+               reduced = reduced + 1
+            end
+            if nmr then
+               reduced = reduced + 1
+            end
+            local moveDepth = depth - 1 - reduced
+
+            score = math.min(cap, -bound(p:move(item.move), 1 - gamma, moveDepth, false))
+
+            if score > -MATE_UPPER then
+               live = true
+            end
+         end
+
+         if score > best then
+            best = score
+            bestMove = item.move
          end
 
          if best >= gamma then
+            if item.move ~= nil and depth > 0 then
+               tp_set(p, depth, true, nil, nil, item.move)
+            end
             break
          end
       end
 
+      -- Terminal classification: no legal (non-king-capturing) reply seen.
+      -- The mate score carries the remaining depth so the winner prefers the
+      -- fastest mate and the loser drags it out (upstream issue #11).
       if depth > 0 and not live then
          local moves = p:genMoves()
          local noLegalMove = true
@@ -1027,25 +1026,16 @@ function search(pos, maxn, history)
          end
 
          if noLegalMove then
+            local mate = math.max(1 - MATE_UPPER, -MATE_LOWER - depth * EVAL_ROUGHNESS)
+
             if p:rotate(true):kingCapture() then
-               best = -MATE_LOWER
+               best = mate
             else
                best = 0
             end
 
             bestMove = nil
          end
-      end
-
-      if best >= gamma and bestMove ~= nil and depth > 0 then
-         tp_set(
-            p,
-            depth,
-            true,
-            nil,
-            nil,
-            bestMove
-         )
       end
 
       if root and best >= gamma and bestMove ~= nil then -- root move needed after depth finishes
@@ -2560,7 +2550,7 @@ end
 
 -- mate1.lua ======= end
 
--- challenge.lua ======= 2224
+-- challenge.lua ======= 1151
 
 function withQuietExec(fn)
    local realExec = binding.exec
@@ -2629,7 +2619,7 @@ function buildHintDisplay(move)
 end
 
 -- How many EXTRA pieces White gets over Black when generating a Challenge position (on top of the ~55-70% split). 0 = no extra bonus.
-CHALLENGE_WHITE_EXTRA_PIECES = 2
+CHALLENGE_WHITE_EXTRA_PIECES = 1
 
 -- Random "legal-looking" position: both kings + a spread of extra pieces (White gets a material edge for a realistic mate within the move budget). Unlike genAiMateIn1(), no immediate forced mate is required.
 function genChallengePosition()
@@ -2657,8 +2647,8 @@ function genChallengePosition()
       local totalExtra = totalPieces - 2  -- minus both kings
       if totalExtra < 1 then totalExtra = 1 end
 
--- White gets ~55-70% of the extra pieces (winnable, but not overloaded); CHALLENGE_WHITE_EXTRA_PIECES adds more, shrinking Black's where possible.
-      local numWhiteExtra = math.max(1, math.floor(totalExtra * (0.55 + math.random() * 0.15)))
+-- White gets ~52-62% of the extra pieces (winnable, but not overloaded); CHALLENGE_WHITE_EXTRA_PIECES adds more, shrinking Black's where possible.
+      local numWhiteExtra = math.max(1, math.floor(totalExtra * (0.52 + math.random() * 0.10)))
       local numBlackExtra = math.max(0, totalExtra - numWhiteExtra)
 
       if CHALLENGE_WHITE_EXTRA_PIECES > 0 then
