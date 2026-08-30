@@ -284,11 +284,10 @@ if crdn == 'l' then
 end
 
    if crdn == 'h4' then
-      echoW("💡 Calculating hint...")
       local mv = findMateIn1Move(curPos)
       if mv then
           print("----")
-         echoW("Solution: " .. render(mv[0 + __1]) .. render(mv[1 + __1]) .. " (mate)")
+         echoW("💡 Solution: " .. render(mv[0 + __1]) .. render(mv[1 + __1]) .. " (mate)")
       else
          echoE("Couldn't find a solution \n(shouldn't happen).")
 
@@ -300,13 +299,12 @@ end
    end
 
    if crdn == 'h1' then
-      echoW("💡 Calculating hint...")
       local mv = findMateIn1Move(curPos)
       if mv then
          local piece = string.char(curPos.board[mv[1] + __1])
          local pieceName = pieceFullNames[piece] or piece
          print("----")
-         echoW("Hint: the mating move is played by a " .. pieceName)
+         echoW("💡 Hint: the mating move is played by a " .. pieceName)
       else
          echoE("Couldn't find a solution \n(shouldn't happen).")
       print("Generating puzzle...")
@@ -317,11 +315,10 @@ end
    end
 
    if crdn == 'h2' then
-      echoW("💡 Calculating hint...")
       local mv = findMateIn1Move(curPos)
       if mv then
          print("----")
-         echoW("Hint: move the piece on " .. render(mv[0 + __1]))
+         echoW("💡 Hint: move the piece on " .. render(mv[0 + __1]))
       else
          echoE("Couldn't find a solution \n(shouldn't happen).")
       print("Generating puzzle...")
@@ -332,11 +329,10 @@ end
    end
 
    if crdn == 'h3' then
-      echoW("💡 Calculating hint...")
       local mv = findMateIn1Move(curPos)
       if mv then
          print("----")
-         echoW("Hint: deliver mate on " .. render(mv[1 + __1]))
+         echoW("💡 Hint: deliver mate on " .. render(mv[1 + __1]))
       else
          echoE("Couldn't find a solution \n(shouldn't happen).")
          print("Generating puzzle...")
