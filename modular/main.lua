@@ -1,4 +1,4 @@
--- main.lua ======= 1300
+-- main.lua ======= 1740
 
 function main()
    local pos = Position.new(initial, 0, {true,true}, {true,true}, 0, 0)
@@ -288,7 +288,7 @@ assert(score)
                if enginemove[3] and enginemove[3] ~= '' and enginemove[3] ~= 'Q' then
                   engineMoveNotation = engineMoveNotation .. enginemove[3]:lower()
                end
-               print("Sunfish " .. (blackMoves + 1) .. ". move: \n" .. engineMoveNotation .. " (" .. math.floor(elapsed + 0.5) .. "s) - score: " .. score)
+               print("Sunfish " .. (blackMoves + 1) .. ". move: \n" .. engineMoveNotation .. " (" .. formatSeconds(elapsed) .. "s) - score: " .. score)
                print("Captured: " .. renderCaptured(capturedByEngine, whiteSymbols))
                table.insert(moveHistory, {notation = engineMoveNotation, by = "sunfish"})
                pos = rotated:move(enginemove)
@@ -399,7 +399,7 @@ print("Captured: " .. renderCaptured(capturedByUser, blackSymbols))
     moveHistory = {table.unpack(moveHistory)},
  }
  whiteMoves = whiteMoves + 1
-print(crdn .. " (" .. math.floor(inputElapsed + 0.5) .. "s)")
+print(crdn .. " (" .. formatSeconds(inputElapsed) .. "s)")
 break
       end
    end
@@ -528,8 +528,7 @@ assert(score)
       if enginemove[3] and enginemove[3] ~= '' and enginemove[3] ~= 'Q' then
          engineMoveNotation = engineMoveNotation .. enginemove[3]:lower()
       end
-print("Sunfish ".. (blackMoves + 1) ..". move:")
-print(engineMoveNotation .. " (" .. math.floor(elapsed + 0.5) .. "s) - score: " .. score)
+print("Sunfish ".. (blackMoves + 1) ..". move: \n" .. engineMoveNotation .. " (" .. formatSeconds(elapsed) .. "s) - score: " .. score)
 print("Captured: " .. renderCaptured(capturedByEngine, whiteSymbols))
 table.insert(moveHistory, {notation = engineMoveNotation, by = "sunfish"})
 pos = pos:move(enginemove)
