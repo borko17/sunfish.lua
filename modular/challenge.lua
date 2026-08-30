@@ -1,4 +1,4 @@
--- challenge.lua ======= 1300
+-- challenge.lua ======= 1740
 
 function withQuietExec(fn)
    local realExec = binding.exec
@@ -524,7 +524,7 @@ function playChallengeGame(board, startPos, startLastMove, startCapturedByUser,
                            gameHistory[tpKey(pos)] = true
                            positionCounts[tpKey(pos)] = (positionCounts[tpKey(pos)] or 0) + 1
                            lastMove = {119 - enginemove[1], 119 - enginemove[2]}
-                           print("Sunfish " .. blackMoves .. ". move: \n" .. engineMoveNotation .. " (" .. math.floor(elapsed + 0.5) .. "s) - score: " .. score)
+                           print("Sunfish " .. blackMoves .. ". move: \n" .. engineMoveNotation .. " (" .. formatSeconds(elapsed) .. "s) - score: " .. score)
                         end
                      end
                   end
@@ -708,7 +708,7 @@ function playChallengeGame(board, startPos, startLastMove, startCapturedByUser,
          engineMoveNotation = engineMoveNotation .. enginemove[3]:lower()
       end
       table.insert(moveHistory, {notation = engineMoveNotation, by = "sunfish"})
-      print("Sunfish " .. (blackMoves + 1) .. ". move: \n" .. engineMoveNotation .. " (" .. math.floor(elapsed + 0.5) .. "s) - score: " .. score)
+      print("Sunfish " .. (blackMoves + 1) .. ". move: \n" .. engineMoveNotation .. " (" .. formatSeconds(elapsed) .. "s) - score: " .. score)
       -- IMPORTANT: Sunfish's move must be applied before computing the next position, history, or board display.
       pos = pos:move(enginemove)
       pos.score = 0
