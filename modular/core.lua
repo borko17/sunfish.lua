@@ -1,4 +1,4 @@
--- core.lua ======= 1151
+-- core.lua ======= 1740
 
 A1, H1, A8, H8 = 91, 98, 21, 28 -- board is a 120-char padded string for cheap off-board checks
 initial =
@@ -123,6 +123,14 @@ pst_K_endgame = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 pst_K_midgame = pst.K
 
 -- Chess logic
+
+function formatSeconds(t)
+   local centis = math.floor(t * 100 + 0.5)
+   local whole = math.floor(centis / 100)
+   local frac = centis % 100
+   return string.format("%d,%02d", whole, frac)
+end
+
 function isspace(s)
    if s == ' ' or s == '\n' then
       return true
