@@ -1,4 +1,4 @@
--- challenge.lua ======= 1740
+-- challenge.lua ======= 2040
 
 function withQuietExec(fn)
    local realExec = binding.exec
@@ -16,14 +16,15 @@ function movesEqual(a, b)
    return a and b and a[1] == b[1] and a[2] == b[2] and a[3] == b[3]
 end
 
-function findHintMove(pos, history, avoidMove)
+function findHintMove(pos, history, avoidMove, showDepth)
    local legal = legalMovesOf(pos)
    if #legal == 0 then return nil end
 
-   local best = withQuietExec(function()
+   local runSearch = function()
       local mv = search(pos, HINT_NODES_BEST or NODES_SEARCHED, history)
       return mv
-   end)
+   end
+   local best = showDepth and runSearch() or withQuietExec(runSearch)
    if best and not isLegalMove(pos, best) then best = nil end
    if not best then
       table.sort(legal, function(a, b) return pos:value(a) > pos:value(b) end)
@@ -219,7 +220,7 @@ function playChallengeGame(board, startPos, startLastMove, startCapturedByUser,
       if hintsOn and not isMateNow and (forceRecompute or cachedHints == nil) then
          echoW("💡 Calculating hint...")
          local avoidMove = findMoveTwoPliesAgo()
-         local mv = findHintMove(pos, gameHistory, avoidMove)
+         local mv = findHintMove(pos, gameHistory, avoidMove, true)
          cachedHints = buildHintDisplay(mv)
       end
       local hints = (hintsOn and not isMateNow) and cachedHints or nil
