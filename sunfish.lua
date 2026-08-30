@@ -25,7 +25,7 @@ local function echoW(msg) binding.exec("echo -w " .. msg) end -- warning/heading
 -- Update
 local SCRIPT_VERSION = "2.608301732"
 local CHANGELOG = {
-   "Added loading messages for hint and position analysis lookups, and per-depth search timing display.""
+   "Added loading messages for hint and position analysis lookups, and per-depth search timing display."
 }
 local GITHUB_RAW_URL = "https://raw.githubusercontent.com/borko17/sunfish.lua/main/docs/update.txt"
 
