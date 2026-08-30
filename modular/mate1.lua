@@ -1,4 +1,4 @@
--- mate1.lua ======= 2224
+-- mate1.lua ======= 1300
 
 -- AI puzzle mode ("m1")
 
@@ -284,6 +284,7 @@ if crdn == 'l' then
 end
 
    if crdn == 'h4' then
+      echoW("💡 Calculating hint...")
       local mv = findMateIn1Move(curPos)
       if mv then
           print("----")
@@ -299,6 +300,7 @@ end
    end
 
    if crdn == 'h1' then
+      echoW("💡 Calculating hint...")
       local mv = findMateIn1Move(curPos)
       if mv then
          local piece = string.char(curPos.board[mv[1] + __1])
@@ -315,6 +317,7 @@ end
    end
 
    if crdn == 'h2' then
+      echoW("💡 Calculating hint...")
       local mv = findMateIn1Move(curPos)
       if mv then
          print("----")
@@ -329,6 +332,7 @@ end
    end
 
    if crdn == 'h3' then
+      echoW("💡 Calculating hint...")
       local mv = findMateIn1Move(curPos)
       if mv then
          print("----")
