@@ -529,7 +529,7 @@ assert(score)
          engineMoveNotation = engineMoveNotation .. enginemove[3]:lower()
       end
 print("Sunfish ".. (blackMoves + 1) ..". move:")
-print(" .. engineMoveNotation .. " (" .. math.floor(elapsed + 0.5) .. "s) - score: " .. score)
+print("engineMoveNotation .. " (" .. math.floor(elapsed + 0.5) .. "s) - score: " .. score)
 print("Captured: " .. renderCaptured(capturedByEngine, whiteSymbols))
 table.insert(moveHistory, {notation = engineMoveNotation, by = "sunfish"})
 pos = pos:move(enginemove)
