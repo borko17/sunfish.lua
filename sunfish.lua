@@ -10,7 +10,7 @@ local CHALLENGE_MAX_PIECES = 20
 local CHALLENGE_GEN_ATTEMPTS = 400
 local CHALLENGE_HINTS_ENABLED = false -- shows suggested move; toggle with 'th'
 
-local NODES_SEARCHED = 2000 -- node budget/search; soft limit, checked only between depths
+local NODES_SEARCHED = 4000 -- node budget/search; soft limit, checked only between depths
 local CHALLENGE_ENGINE_NODES = 600 -- separate, weaker budget for Sunfish's replies in Challenge mode
 local TABLE_SIZE = NODES_SEARCHED * 25 -- scaled off NODES_SEARCHED so it doesn't thrash; upstream's 1e6 too heavy for Luaj-jse on phone
 local MATE_VALUE = 30000 -- exceeds 8*queen+2*(rook+knight+bishop); king value is double this
@@ -23,7 +23,7 @@ local function echoS(msg) binding.exec("echo -s " .. msg) end -- success
 local function echoW(msg) binding.exec("echo -w " .. msg) end -- warning/heading
 
 -- Update
-local SCRIPT_VERSION = "2.608301732"
+local SCRIPT_VERSION = "2.608302040"
 local CHANGELOG = {
    "Added loading messages for hint and position analysis lookups, and per-depth search timing display."
 }
@@ -1924,7 +1924,7 @@ function showHelpCommon()
    print("-------------")
    print("USE_UNICODE_PIECES = true/false")
    print("SHOW_ANNOTATIONS = true/false")
-   print("local NODES_SEARCHED = 2000")
+   print("local NODES_SEARCHED = 4000")
    print("local CHALLENGE_ENGINE_NODES = 600")
    print("")
    echoW("PIECE SYMBOLS:")
@@ -2000,10 +2000,10 @@ function showHelpGame()
    print("     • 's0' saves the starting position.")
    print("'l' - Load saved game")
    print("'nN' - Change engine node budget")
-   print("     • e.g. 'n2000'")
+   print("     • e.g. 'n8000'")
    print("     • higher N = harder/slower")
    print("     • lower N = easier/faster")
-   print("     • default: n2000")
+   print("     • default: n4000")
    print("'m' - Show move history")
    print("'r' - Resign current game")
    print("'n' - Start a new game")
@@ -2567,7 +2567,7 @@ end
 
 -- mate1.lua ======= end
 
--- challenge.lua ======= 1740
+-- challenge.lua ======= 2040
 
 function withQuietExec(fn)
    local realExec = binding.exec
@@ -2585,14 +2585,15 @@ function movesEqual(a, b)
    return a and b and a[1] == b[1] and a[2] == b[2] and a[3] == b[3]
 end
 
-function findHintMove(pos, history, avoidMove)
+function findHintMove(pos, history, avoidMove, showDepth)
    local legal = legalMovesOf(pos)
    if #legal == 0 then return nil end
 
-   local best = withQuietExec(function()
+   local runSearch = function()
       local mv = search(pos, HINT_NODES_BEST or NODES_SEARCHED, history)
       return mv
-   end)
+   end
+   local best = showDepth and runSearch() or withQuietExec(runSearch)
    if best and not isLegalMove(pos, best) then best = nil end
    if not best then
       table.sort(legal, function(a, b) return pos:value(a) > pos:value(b) end)
@@ -2788,7 +2789,7 @@ function playChallengeGame(board, startPos, startLastMove, startCapturedByUser,
       if hintsOn and not isMateNow and (forceRecompute or cachedHints == nil) then
          echoW("💡 Calculating hint...")
          local avoidMove = findMoveTwoPliesAgo()
-         local mv = findHintMove(pos, gameHistory, avoidMove)
+         local mv = findHintMove(pos, gameHistory, avoidMove, true)
          cachedHints = buildHintDisplay(mv)
       end
       local hints = (hintsOn and not isMateNow) and cachedHints or nil
@@ -3469,7 +3470,7 @@ while true do
       displayPosition(pos, lastMove, capturedByUser, capturedByEngine, blackMoves)
       elseif crdn:match('^n%d+$') then
    local n = tonumber(crdn:match('^n(%d+)$'))
-   if n and n >= 1000 and n <= 50000 then
+   if n and n >= 1000 and n <= 100000 then
       NODES_SEARCHED = n
       TABLE_SIZE = NODES_SEARCHED * 25
       print("----")
@@ -3477,7 +3478,7 @@ while true do
       echoW("(table size " .. TABLE_SIZE .. ")")
    else
       print("----")
-      echoE("Enter a number between 1000 and 50000, e.g. 'n2000'")
+      echoE("Enter a number between 1000 and 100000, e.g. 'n6000'")
    end
    print("")
    displayPosition(pos, lastMove, capturedByUser, capturedByEngine, blackMoves)
