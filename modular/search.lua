@@ -1,4 +1,4 @@
--- search.lua ======= 1151
+-- search.lua ======= 1252
 
 function search(pos, maxn, history)
    maxn = maxn or NODES_SEARCHED
@@ -277,6 +277,7 @@ function search(pos, maxn, history)
    end
 
    -- Iterative deepening MTD-bi.
+   local prevDepthTime = startTime
    for depth = 1, 98 do
       local lower = 1 - MATE_UPPER
       local upper = MATE_UPPER
@@ -304,9 +305,14 @@ function search(pos, maxn, history)
       else
          nodeDisplay = string.format("%dk", math.floor(maxn / 1000))
       end
+      local nowTime = os.clock()
+      local depthTime = nowTime - prevDepthTime
+      prevDepthTime = nowTime
+      local depthTimeStr = string.format("%.2f", depthTime):gsub("%.", ",")
+
       echoW(string.format(
-         "(depth %d, %d/%s nodes)",
-         depth, nodes, nodeDisplay
+         "(depth %d, %d/%s nodes) - %ss",
+         depth, nodes, nodeDisplay, depthTimeStr
       ))
 
       if nodes >= maxn or
