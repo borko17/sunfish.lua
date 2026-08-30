@@ -1,8 +1,7 @@
 -- manifest.txt =======
 
-SCRIPT_VERSION = "2.608300228"
+SCRIPT_VERSION = "2.608301732"
 
 CHANGELOG = {
-   "Ported search() to upstream Sunfish 2026: two-tier null-move (short guard + deep fuel probe), Late Move Reductions (LMR) for weak quiet moves at depth>=7, depth-aware futility ceiling, mate-distance scoring so the engine prefers the fastest mate and delays the slowest (QS/QS_A retuned to 36/180)",
-   "Challenge Game: narrowed White's material edge (extra-piece split 55-70% -> 52-62%, fixed bonus 2 -> 1) so Black starts closer to even without erasing White's advantage",
+   "Added loading messages for hint and position analysis lookups, and per-depth search timing display.",
 }
