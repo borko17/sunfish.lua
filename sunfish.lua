@@ -107,7 +107,7 @@ local function checkForUpdate()
    end
 end
 
--- core.lua ======= 1151
+-- core.lua ======= 1740
 
 A1, H1, A8, H8 = 91, 98, 21, 28 -- board is a 120-char padded string for cheap off-board checks
 initial =
@@ -232,6 +232,14 @@ pst_K_endgame = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 pst_K_midgame = pst.K
 
 -- Chess logic
+
+function formatSeconds(t)
+   local centis = math.floor(t * 100 + 0.5)
+   local whole = math.floor(centis / 100)
+   local frac = centis % 100
+   return string.format("%d,%02d", whole, frac)
+end
+
 function isspace(s)
    if s == ' ' or s == '\n' then
       return true
@@ -795,6 +803,7 @@ LMR = 70
 NULL_MARGIN = -200
 
 -- core.lua ======= end
+
 
 -- search.lua ======= 1300
 
@@ -2558,7 +2567,7 @@ end
 
 -- mate1.lua ======= end
 
--- challenge.lua ======= 1300
+-- challenge.lua ======= 1740
 
 function withQuietExec(fn)
    local realExec = binding.exec
@@ -3084,7 +3093,7 @@ function playChallengeGame(board, startPos, startLastMove, startCapturedByUser,
                            gameHistory[tpKey(pos)] = true
                            positionCounts[tpKey(pos)] = (positionCounts[tpKey(pos)] or 0) + 1
                            lastMove = {119 - enginemove[1], 119 - enginemove[2]}
-                           print("Sunfish " .. blackMoves .. ". move: \n" .. engineMoveNotation .. " (" .. math.floor(elapsed + 0.5) .. "s) - score: " .. score)
+                           print("Sunfish " .. blackMoves .. ". move: \n" .. engineMoveNotation .. " (" .. formatSeconds(elapsed) .. "s) - score: " .. score)
                         end
                      end
                   end
@@ -3268,7 +3277,7 @@ function playChallengeGame(board, startPos, startLastMove, startCapturedByUser,
          engineMoveNotation = engineMoveNotation .. enginemove[3]:lower()
       end
       table.insert(moveHistory, {notation = engineMoveNotation, by = "sunfish"})
-      print("Sunfish " .. (blackMoves + 1) .. ". move: \n" .. engineMoveNotation .. " (" .. math.floor(elapsed + 0.5) .. "s) - score: " .. score)
+      print("Sunfish " .. (blackMoves + 1) .. ". move: \n" .. engineMoveNotation .. " (" .. formatSeconds(elapsed) .. "s) - score: " .. score)
       -- IMPORTANT: Sunfish's move must be applied before computing the next position, history, or board display.
       pos = pos:move(enginemove)
       pos.score = 0
@@ -3339,7 +3348,7 @@ end
 
 -- challenge.lua ======= end
 
--- main.lua ======= 1300
+-- main.lua ======= 1740
 
 function main()
    local pos = Position.new(initial, 0, {true,true}, {true,true}, 0, 0)
@@ -3629,7 +3638,7 @@ assert(score)
                if enginemove[3] and enginemove[3] ~= '' and enginemove[3] ~= 'Q' then
                   engineMoveNotation = engineMoveNotation .. enginemove[3]:lower()
                end
-               print("Sunfish " .. (blackMoves + 1) .. ". move: \n" .. engineMoveNotation .. " (" .. math.floor(elapsed + 0.5) .. "s) - score: " .. score)
+               print("Sunfish " .. (blackMoves + 1) .. ". move: \n" .. engineMoveNotation .. " (" .. formatSeconds(elapsed) .. "s) - score: " .. score)
                print("Captured: " .. renderCaptured(capturedByEngine, whiteSymbols))
                table.insert(moveHistory, {notation = engineMoveNotation, by = "sunfish"})
                pos = rotated:move(enginemove)
@@ -3740,7 +3749,7 @@ print("Captured: " .. renderCaptured(capturedByUser, blackSymbols))
     moveHistory = {table.unpack(moveHistory)},
  }
  whiteMoves = whiteMoves + 1
-print(crdn .. " (" .. math.floor(inputElapsed + 0.5) .. "s)")
+print(crdn .. " (" .. formatSeconds(inputElapsed) .. "s)")
 break
       end
    end
@@ -3869,8 +3878,7 @@ assert(score)
       if enginemove[3] and enginemove[3] ~= '' and enginemove[3] ~= 'Q' then
          engineMoveNotation = engineMoveNotation .. enginemove[3]:lower()
       end
-print("Sunfish ".. (blackMoves + 1) ..". move:")
-print(engineMoveNotation .. " (" .. math.floor(elapsed + 0.5) .. "s) - score: " .. score)
+print("Sunfish ".. (blackMoves + 1) ..". move: \n" .. engineMoveNotation .. " (" .. formatSeconds(elapsed) .. "s) - score: " .. score)
 print("Captured: " .. renderCaptured(capturedByEngine, whiteSymbols))
 table.insert(moveHistory, {notation = engineMoveNotation, by = "sunfish"})
 pos = pos:move(enginemove)
@@ -3911,6 +3919,7 @@ positionCounts[tpKey(pos)] = (positionCounts[tpKey(pos)] or 0) + 1
 end
 
 -- main.lua ======= end
+
 
 math.randomseed(os.time())
 main()
