@@ -1,4 +1,4 @@
--- main.lua ======= 2224
+-- main.lua ======= 1300
 
 function main()
    local pos = Position.new(initial, 0, {true,true}, {true,true}, 0, 0)
@@ -105,7 +105,7 @@ while true do
       displayPosition(pos, lastMove, capturedByUser, capturedByEngine, blackMoves)
    elseif crdn == 'e' then
       print("----")
-      echoW("Analyzing position...")
+      echoW("💡 Analyzing position...")
       local analyzeMove, analyzeScore, analyzeDepth, analyzeNodes, analyzeElapsed = search(pos, NODES_SEARCHED, gameHistory)
       if analyzeMove and isLegalMove(pos, analyzeMove) then
          echoW("Suggested move: " .. render(analyzeMove[1]) .. render(analyzeMove[2]) .. " (score: " .. analyzeScore .. ")")
