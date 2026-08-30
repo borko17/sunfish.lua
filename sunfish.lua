@@ -10,7 +10,7 @@ local CHALLENGE_MAX_PIECES = 20
 local CHALLENGE_GEN_ATTEMPTS = 400
 local CHALLENGE_HINTS_ENABLED = false -- shows suggested move; toggle with 'th'
 
-local NODES_SEARCHED = 4000 -- node budget/search; soft limit, checked only between depths
+local NODES_SEARCHED = 2000 -- node budget/search; soft limit, checked only between depths
 local CHALLENGE_ENGINE_NODES = 600 -- separate, weaker budget for Sunfish's replies in Challenge mode
 local TABLE_SIZE = NODES_SEARCHED * 25 -- scaled off NODES_SEARCHED so it doesn't thrash; upstream's 1e6 too heavy for Luaj-jse on phone
 local MATE_VALUE = 30000 -- exceeds 8*queen+2*(rook+knight+bishop); king value is double this
@@ -27,7 +27,6 @@ local SCRIPT_VERSION = "2.608300228"
 local CHANGELOG = {
    "Ported search() to upstream Sunfish 2026: two-tier null-move (short guard + deep fuel probe), Late Move Reductions (LMR) for weak quiet moves at depth>=7, depth-aware futility ceiling, mate-distance scoring so the engine prefers the fastest mate and delays the slowest (QS/QS_A retuned to 36/180)",
    "Challenge Game: narrowed White's material edge (extra-piece split 55-70% -> 52-62%, fixed bonus 2 -> 1) so Black starts closer to even without erasing White's advantage",
-   "Default value for NODES_SEARCHED was returned to 4000.",
 }
 local GITHUB_RAW_URL = "https://raw.githubusercontent.com/borko17/sunfish.lua/main/docs/update.txt"
 
@@ -1908,7 +1907,7 @@ function showHelpCommon()
    print("-------------")
    print("USE_UNICODE_PIECES = true/false")
    print("SHOW_ANNOTATIONS = true/false")
-   print("local NODES_SEARCHED = 4000")
+   print("local NODES_SEARCHED = 2000")
    print("local CHALLENGE_ENGINE_NODES = 600")
    print("")
    echoW("PIECE SYMBOLS:")
@@ -1984,10 +1983,10 @@ function showHelpGame()
    print("     • 's0' saves the starting position.")
    print("'l' - Load saved game")
    print("'nN' - Change engine node budget")
-   print("     • e.g. 'n4000'")
+   print("     • e.g. 'n2000'")
    print("     • higher N = harder/slower")
    print("     • lower N = easier/faster")
-   print("     • default: n4000")
+   print("     • default: n2000")
    print("'m' - Show move history")
    print("'r' - Resign current game")
    print("'n' - Start a new game")
