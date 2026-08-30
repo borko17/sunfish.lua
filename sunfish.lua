@@ -2919,7 +2919,7 @@ function playChallengeGame(board, startPos, startLastMove, startCapturedByUser,
                echoW("Node budget set to " .. NODES_SEARCHED)
                echoW("(table size " .. TABLE_SIZE .. ")")
             else
-               echoE("Enter a number between 1000 and 50000, e.g. 'n2000'")
+               echoE("Enter a number between 1000 and 50000, e.g. 'n6000'")
             end
             print("")
             showBoard(checkers, guards, false, false)
@@ -3470,7 +3470,7 @@ while true do
       displayPosition(pos, lastMove, capturedByUser, capturedByEngine, blackMoves)
       elseif crdn:match('^n%d+$') then
    local n = tonumber(crdn:match('^n(%d+)$'))
-   if n and n >= 1000 and n <= 100000 then
+   if n and n >= 1000 and n <= 50000 then
       NODES_SEARCHED = n
       TABLE_SIZE = NODES_SEARCHED * 25
       print("----")
@@ -3478,7 +3478,7 @@ while true do
       echoW("(table size " .. TABLE_SIZE .. ")")
    else
       print("----")
-      echoE("Enter a number between 1000 and 100000, e.g. 'n6000'")
+      echoE("Enter a number between 1000 and 50000, e.g. 'n6000'")
    end
    print("")
    displayPosition(pos, lastMove, capturedByUser, capturedByEngine, blackMoves)
