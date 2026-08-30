@@ -1,4 +1,4 @@
--- search.lua ======= 1252
+-- search.lua ======= 1300
 
 function search(pos, maxn, history)
    maxn = maxn or NODES_SEARCHED
@@ -308,7 +308,10 @@ function search(pos, maxn, history)
       local nowTime = os.clock()
       local depthTime = nowTime - prevDepthTime
       prevDepthTime = nowTime
-      local depthTimeStr = string.format("%.2f", depthTime):gsub("%.", ",")
+      local centis = math.floor(depthTime * 100 + 0.5)
+      local whole = math.floor(centis / 100)
+      local frac = centis % 100
+      local depthTimeStr = string.format("%d,%02d", whole, frac)
 
       echoW(string.format(
          "(depth %d, %d/%s nodes) - %ss",
