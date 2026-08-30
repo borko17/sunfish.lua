@@ -1,4 +1,4 @@
--- challenge.lua ======= 1151
+-- challenge.lua ======= 1300
 
 function withQuietExec(fn)
    local realExec = binding.exec
@@ -217,6 +217,7 @@ function playChallengeGame(board, startPos, startLastMove, startCapturedByUser,
 -- Prints the board using cachedHints (computes it if missing/stale). forceRecompute=true only when the position just changed; the 'd' toggle reuses cachedHints since the position hasn't moved.
    local function showBoard(checkers, guards, isMateNow, forceRecompute)
       if hintsOn and not isMateNow and (forceRecompute or cachedHints == nil) then
+         echoW("💡 Calculating hint...")
          local avoidMove = findMoveTwoPliesAgo()
          local mv = findHintMove(pos, gameHistory, avoidMove)
          cachedHints = buildHintDisplay(mv)
