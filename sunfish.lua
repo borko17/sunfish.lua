@@ -23,10 +23,9 @@ local function echoS(msg) binding.exec("echo -s " .. msg) end -- success
 local function echoW(msg) binding.exec("echo -w " .. msg) end -- warning/heading
 
 -- Update
-local SCRIPT_VERSION = "2.608300228"
+local SCRIPT_VERSION = "2.608301732"
 local CHANGELOG = {
-   "Ported search() to upstream Sunfish 2026: two-tier null-move (short guard + deep fuel probe), Late Move Reductions (LMR) for weak quiet moves at depth>=7, depth-aware futility ceiling, mate-distance scoring so the engine prefers the fastest mate and delays the slowest (QS/QS_A retuned to 36/180)",
-   "Challenge Game: narrowed White's material edge (extra-piece split 55-70% -> 52-62%, fixed bonus 2 -> 1) so Black starts closer to even without erasing White's advantage",
+   "Added loading messages for hint and position analysis lookups, and per-depth search timing display.""
 }
 local GITHUB_RAW_URL = "https://raw.githubusercontent.com/borko17/sunfish.lua/main/docs/update.txt"
 
@@ -797,7 +796,7 @@ NULL_MARGIN = -200
 
 -- core.lua ======= end
 
--- search.lua ======= 1151
+-- search.lua ======= 1300
 
 function search(pos, maxn, history)
    maxn = maxn or NODES_SEARCHED
@@ -1076,6 +1075,7 @@ function search(pos, maxn, history)
    end
 
    -- Iterative deepening MTD-bi.
+   local prevDepthTime = startTime
    for depth = 1, 98 do
       local lower = 1 - MATE_UPPER
       local upper = MATE_UPPER
@@ -1103,9 +1103,17 @@ function search(pos, maxn, history)
       else
          nodeDisplay = string.format("%dk", math.floor(maxn / 1000))
       end
+      local nowTime = os.clock()
+      local depthTime = nowTime - prevDepthTime
+      prevDepthTime = nowTime
+      local centis = math.floor(depthTime * 100 + 0.5)
+      local whole = math.floor(centis / 100)
+      local frac = centis % 100
+      local depthTimeStr = string.format("%d,%02d", whole, frac)
+
       echoW(string.format(
-         "(depth %d, %d/%s nodes)",
-         depth, nodes, nodeDisplay
+         "(depth %d, %d/%s nodes) - %ss",
+         depth, nodes, nodeDisplay, depthTimeStr
       ))
 
       if nodes >= maxn or
@@ -2141,7 +2149,7 @@ end
 
 -- help.lua ======= end
 
--- mate1.lua ======= 2224
+-- mate1.lua ======= 1300
 
 -- AI puzzle mode ("m1")
 
@@ -2430,7 +2438,7 @@ end
       local mv = findMateIn1Move(curPos)
       if mv then
           print("----")
-         echoW("Solution: " .. render(mv[0 + __1]) .. render(mv[1 + __1]) .. " (mate)")
+         echoW("💡 Solution: " .. render(mv[0 + __1]) .. render(mv[1 + __1]) .. " (mate)")
       else
          echoE("Couldn't find a solution \n(shouldn't happen).")
 
@@ -2447,7 +2455,7 @@ end
          local piece = string.char(curPos.board[mv[1] + __1])
          local pieceName = pieceFullNames[piece] or piece
          print("----")
-         echoW("Hint: the mating move is played by a " .. pieceName)
+         echoW("💡 Hint: the mating move is played by a " .. pieceName)
       else
          echoE("Couldn't find a solution \n(shouldn't happen).")
       print("Generating puzzle...")
@@ -2461,7 +2469,7 @@ end
       local mv = findMateIn1Move(curPos)
       if mv then
          print("----")
-         echoW("Hint: move the piece on " .. render(mv[0 + __1]))
+         echoW("💡 Hint: move the piece on " .. render(mv[0 + __1]))
       else
          echoE("Couldn't find a solution \n(shouldn't happen).")
       print("Generating puzzle...")
@@ -2475,7 +2483,7 @@ end
       local mv = findMateIn1Move(curPos)
       if mv then
          print("----")
-         echoW("Hint: deliver mate on " .. render(mv[1 + __1]))
+         echoW("💡 Hint: deliver mate on " .. render(mv[1 + __1]))
       else
          echoE("Couldn't find a solution \n(shouldn't happen).")
          print("Generating puzzle...")
@@ -2550,7 +2558,7 @@ end
 
 -- mate1.lua ======= end
 
--- challenge.lua ======= 1151
+-- challenge.lua ======= 1300
 
 function withQuietExec(fn)
    local realExec = binding.exec
@@ -2769,6 +2777,7 @@ function playChallengeGame(board, startPos, startLastMove, startCapturedByUser,
 -- Prints the board using cachedHints (computes it if missing/stale). forceRecompute=true only when the position just changed; the 'd' toggle reuses cachedHints since the position hasn't moved.
    local function showBoard(checkers, guards, isMateNow, forceRecompute)
       if hintsOn and not isMateNow and (forceRecompute or cachedHints == nil) then
+         echoW("💡 Calculating hint...")
          local avoidMove = findMoveTwoPliesAgo()
          local mv = findHintMove(pos, gameHistory, avoidMove)
          cachedHints = buildHintDisplay(mv)
@@ -3330,7 +3339,7 @@ end
 
 -- challenge.lua ======= end
 
--- main.lua ======= 2224
+-- main.lua ======= 1300
 
 function main()
    local pos = Position.new(initial, 0, {true,true}, {true,true}, 0, 0)
@@ -3437,7 +3446,7 @@ while true do
       displayPosition(pos, lastMove, capturedByUser, capturedByEngine, blackMoves)
    elseif crdn == 'e' then
       print("----")
-      echoW("Analyzing position...")
+      echoW("💡 Analyzing position...")
       local analyzeMove, analyzeScore, analyzeDepth, analyzeNodes, analyzeElapsed = search(pos, NODES_SEARCHED, gameHistory)
       if analyzeMove and isLegalMove(pos, analyzeMove) then
          echoW("Suggested move: " .. render(analyzeMove[1]) .. render(analyzeMove[2]) .. " (score: " .. analyzeScore .. ")")
@@ -3860,7 +3869,8 @@ assert(score)
       if enginemove[3] and enginemove[3] ~= '' and enginemove[3] ~= 'Q' then
          engineMoveNotation = engineMoveNotation .. enginemove[3]:lower()
       end
-print("Sunfish ".. (blackMoves + 1) ..". move: \n" .. engineMoveNotation .. " (" .. math.floor(elapsed + 0.5) .. "s) - score: " .. score)
+print("Sunfish ".. (blackMoves + 1) ..". move:")
+print(engineMoveNotation .. " (" .. math.floor(elapsed + 0.5) .. "s) - score: " .. score)
 print("Captured: " .. renderCaptured(capturedByEngine, whiteSymbols))
 table.insert(moveHistory, {notation = engineMoveNotation, by = "sunfish"})
 pos = pos:move(enginemove)
