@@ -19,7 +19,6 @@ MATE_VALUE = 30000 -- exceeds 8*queen+2*(rook+knight+bishop); king value is doub
 MATE_UPPER = 60000 + (10 * 2529) -- search() scores mate near this, not MATE_VALUE - callers must match
 --------------------
 
-
 -- Console output helpers (wrap binding.exec("echo -X " .. msg) calls for readability)
 local function echoE(msg) binding.exec("echo -e " .. msg) end -- error
 local function echoS(msg) binding.exec("echo -s " .. msg) end -- success
@@ -1977,14 +1976,6 @@ function showHelpCommon()
    print("For letter mode:")
    print("• Any monospaced font")
    print("")
-   echoW("PUZZLE GAMES:")
-   print("-------------")
-   print("'m1' - Enter Mate-in-1 puzzle mode")
-   print("'cg' - Enter Challenge Game mode")
-   print("     • " .. CHALLENGE_MIN_PIECES .. "-" .. CHALLENGE_MAX_PIECES .. " random pieces,")
-   print("       play freely vs Sunfish,")
-   print("       no move limit")
-   print("")
 end
 
 -- Help: normal game
@@ -2024,6 +2015,11 @@ function showHelpGame()
    print("'r' - Resign current game")
    print("'n' - Start a new game")
    print("'u' - Check sunfish.lua for updates")
+   print("'m1' - Enter Mate-in-1 puzzle mode")
+   print("'cg' - Enter Challenge Game mode")
+   print("     • " .. CHALLENGE_MIN_PIECES .. "-" .. CHALLENGE_MAX_PIECES .. " random pieces,")
+   print("       play freely vs Sunfish,")
+   print("       no move limit")
    print("'q' - Quit chess.lua")
    print("")
    print("")
