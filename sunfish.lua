@@ -2,20 +2,22 @@
 -- sunfish.lua Chess engine, Lua port chain: 1. Original algorithm: Sunfish (Python) by Thomas Ahle https://github.com/thomasahle/sunfish - BSD license 2. Initial Lua transpilation attributed to Soumith Chintala 3. Extended for Yantra Launcher / Android (Luaj-jse 3.0.1), with UI, save/load, puzzle mode, and search tuning, by borko17 (https://github.com/borko17/sunfish-lua) (with help from Claude AI).
 
 -- CONFIG: Options at the top
-local USE_UNICODE_PIECES = false
-local SHOW_ANNOTATIONS = true
+--------------------
+USE_UNICODE_PIECES = false
+SHOW_ANNOTATIONS = true
 
--- Challenge ('cg'): random position, N pieces, play until mate/draw/quit
-local CHALLENGE_MIN_PIECES = 10
-local CHALLENGE_MAX_PIECES = 20
-local CHALLENGE_GEN_ATTEMPTS = 400
-local CHALLENGE_HINTS_ENABLED = false -- shows suggested move; toggle with 'th'
+NODES_SEARCHED = 4000 -- node budget/search; soft limit, checked only between depths
+TABLE_SIZE = NODES_SEARCHED * 25 -- scaled off NODES_SEARCHED so it doesn't thrash; upstream's 1e6 too heavy for Luaj-jse on phone
 
-local NODES_SEARCHED = 4000 -- node budget/search; soft limit, checked only between depths
-local CHALLENGE_ENGINE_NODES = 1000 -- separate, weaker budget for Sunfish's replies in Challenge mode
-local TABLE_SIZE = NODES_SEARCHED * 25 -- scaled off NODES_SEARCHED so it doesn't thrash; upstream's 1e6 too heavy for Luaj-jse on phone
-local MATE_VALUE = 30000 -- exceeds 8*queen+2*(rook+knight+bishop); king value is double this
-local MATE_UPPER = 60000 + (10 * 2529) -- search() scores mate near this, not MATE_VALUE - callers must match
+CHALLENGE_ENGINE_NODES = 1000 -- separate, weaker budget for Sunfish's replies in Challenge mode
+CHALLENGE_MIN_PIECES = 10
+CHALLENGE_MAX_PIECES = 20
+CHALLENGE_GEN_ATTEMPTS = 400
+CHALLENGE_HINTS_ENABLED = false -- shows suggested move; toggle with 'th'
+
+MATE_VALUE = 30000 -- exceeds 8*queen+2*(rook+knight+bishop); king value is double this
+MATE_UPPER = 60000 + (10 * 2529) -- search() scores mate near this, not MATE_VALUE - callers must match
+--------------------
 
 
 -- Console output helpers (wrap binding.exec("echo -X " .. msg) calls for readability)
