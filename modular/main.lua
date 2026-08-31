@@ -1,4 +1,4 @@
--- main.lua ======= 1740
+-- main.lua ======= 0615
 
 function main()
    local pos = Position.new(initial, 0, {true,true}, {true,true}, 0, 0)
@@ -260,7 +260,7 @@ while true do
             local rotated = pos:rotate()
             print("")
             echoW("🐠 Sunfish is thinking...")
-enginemove, score, reachedDepth, usedNodes, elapsed = search(pos, NODES_SEARCHED, gameHistory)
+enginemove, score, reachedDepth, usedNodes, elapsed = search(rotated, NODES_SEARCHED, gameHistory)
 assert(score)
             if PROFILE_PRINT_ENABLED then
                printProfile(elapsed, reachedDepth, usedNodes)
