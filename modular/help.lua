@@ -1,12 +1,17 @@
--- help.lua ======= 1855
+-- help.lua ======= 2224
 
 -- Common help section shared by all three modes (save formats, display modes, symbols, fonts)
 
 function showHelpCommon()
+   echoW("=== SUNFISH.LUA HELP ===")
+   print("")
    echoW("PUZZLE GAMES:")
    print("-------------")
    print("'m1' - Enter Mate-in-1 puzzle mode")
    print("'cg' - Enter Challenge Game mode")
+   print("     • " .. CHALLENGE_MIN_PIECES .. "-" .. CHALLENGE_MAX_PIECES .. " random pieces,")
+   print("       play freely vs Sunfish,")
+   print("       no move limit")
    print("")
    echoW("SAVE-GAME FORMATS:")
    print("-------------")
@@ -103,9 +108,7 @@ end
 -- Help: normal game
 
 function showHelpGame()
-   print("")
-   echoW("=== CHESS.LUA HELP ===")
-   print("")
+   showHelpCommon()
    echoW("COMMANDS FOR CHESS:")
    print("-------------")
    print("moves - Enter moves in format 'e2e4'")
@@ -141,18 +144,14 @@ function showHelpGame()
    print("'u' - Check sunfish.lua for updates")
    print("'q' - Quit chess.lua")
    print("")
-
-   showHelpCommon()
-
-   echoW("↑↑↑ CHESS.LUA HELP ↑↑↑")
+   print("")
+   echoW("↑↑↑ SUNFISH.LUA HELP ↑↑↑")
 end
 
 -- Help: mate-in-1 puzzle mode
 
 function showHelpPuzzle()
-   print("")
-   echoW("=== CHESS.LUA HELP ===")
-   print("")
+   showHelpCommon()
    echoW("COMMANDS FOR PUZZLE MODE:")
    print("-------------")
    print("'h1' - Hint: which piece type mates")
@@ -169,27 +168,20 @@ function showHelpPuzzle()
    print("'?' - Show About screen")
    print("'q' - Leave puzzle mode")
    print("")
-
-   showHelpCommon()
-
-   echoW("↑↑↑ CHESS.LUA HELP ↑↑↑")
+   print("")
+   echoW("↑↑↑ SUNFISH.LUA HELP ↑↑↑")
 end
 
 -- Help: Challenge Game mode
 
 function showHelpChallenge()
-   print("")
-   echoW("=== CHESS.LUA HELP ===")
-   print("")
+   showHelpCommon()
    echoW("COMMANDS FOR CHALLENGE GAME:")
    print("-------------")
-   print("     • " .. CHALLENGE_MIN_PIECES .. "-" .. CHALLENGE_MAX_PIECES .. " random pieces,")
-   print("       play freely vs Sunfish,")
-   print("       no move limit")
+   print("'th' - Toggle hints on/off")
    print("     • shows a suggested move")
    print("       as an on-board hint")
    print("       to help you learn")
-   print("'th' - Toggle hints on/off")
    print("'z' - Undo your last move")
    print("    • also undoes Sunfish's reply")
    print("    • one level only (no re-undo)")
@@ -197,12 +189,24 @@ function showHelpChallenge()
    print("'n' - New position")
    print("'q' - Leave Challenge Game mode")
    print("")
-   print("• All other commands work the same as in a normal game (s/sN/l/m/h/a/d/u/?)")
+   print("'s' - Save current game")
+   print("      (generate code)")
+   print("'sN' - Save position")
+   print("       after history move N")
+   print("     • e.g. 's15' saves the position")
+   print("       after move 15, even if")
+   print("       you have played further.")
+   print("     • 's0' saves the starting position.")
+   print("'l' - Load saved game")
+   print("'m' - Show move history")
+   print("'h' - Show this help screen")
+   print("'a' - Toggle annotations")
+   print("'d' - Toggle display mode")
+   print("'u' - Check sunfish.lua for updates")
+   print("'?' - Show About screen")
    print("")
-
-   showHelpCommon()
-
-   echoW("↑↑↑ CHESS.LUA HELP ↑↑↑")
+   print("")
+   echoW("↑↑↑ SUNFISH.LUA HELP ↑↑↑")
 end
 
 -- Kept for backward-compat: some call sites may still reference the old combined name.
