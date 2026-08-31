@@ -188,7 +188,7 @@ while true do
    if code and code ~= '' then
       local result = {loadGame(code)}
       if result[1] then
-         if result[11] == "abc" then
+         if result[11] == "cg" then
             echoW("Note: this code was saved from Challenge Game (type 'cg' then 'l' there to resume with hints).")
          end
          pos = result[1]
