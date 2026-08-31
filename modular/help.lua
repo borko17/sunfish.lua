@@ -1,4 +1,4 @@
--- help.lua ======= 2224
+-- help.lua ======= 2130
 
 -- Common help section shared by all three modes (save formats, display modes, symbols, fonts)
 
@@ -95,14 +95,6 @@ function showHelpCommon()
    print("For letter mode:")
    print("• Any monospaced font")
    print("")
-   echoW("PUZZLE GAMES:")
-   print("-------------")
-   print("'m1' - Enter Mate-in-1 puzzle mode")
-   print("'cg' - Enter Challenge Game mode")
-   print("     • " .. CHALLENGE_MIN_PIECES .. "-" .. CHALLENGE_MAX_PIECES .. " random pieces,")
-   print("       play freely vs Sunfish,")
-   print("       no move limit")
-   print("")
 end
 
 -- Help: normal game
@@ -142,6 +134,11 @@ function showHelpGame()
    print("'r' - Resign current game")
    print("'n' - Start a new game")
    print("'u' - Check sunfish.lua for updates")
+   print("'m1' - Enter Mate-in-1 puzzle mode")
+   print("'cg' - Enter Challenge Game mode")
+   print("     • " .. CHALLENGE_MIN_PIECES .. "-" .. CHALLENGE_MAX_PIECES .. " random pieces,")
+   print("       play freely vs Sunfish,")
+   print("       no move limit")
    print("'q' - Quit chess.lua")
    print("")
    print("")
