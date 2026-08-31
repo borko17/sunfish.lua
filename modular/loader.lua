@@ -12,23 +12,8 @@
 -- effect the next time you run this loader, not live during the current game.
 
 
--- CONFIG: Options at the top
---------------------
-USE_UNICODE_PIECES = false
-SHOW_ANNOTATIONS = true
-CHALLENGE_MIN_PIECES = 10
-CHALLENGE_MAX_PIECES = 20
-CHALLENGE_GEN_ATTEMPTS = 400
-CHALLENGE_HINTS_ENABLED = false -- shows suggested move; toggle with 'th'
-NODES_SEARCHED = 2000 -- node budget/search; soft limit, checked only between depths
-CHALLENGE_ENGINE_NODES = 600 -- separate, weaker budget for Sunfish's replies in Challenge mode
-TABLE_SIZE = NODES_SEARCHED * 25 -- scaled off NODES_SEARCHED so it doesn't thrash; upstream's 1e6 too heavy for Luaj-jse on phone
-MATE_VALUE = 30000 -- exceeds 8*queen+2*(rook+knight+bishop); king value is double this
-MATE_UPPER = 60000 + (10 * 2529) -- search() scores mate near this, not MATE_VALUE - callers must match
---------------------
-
-
 local BASE_URL = "https://raw.githubusercontent.com/borko17/sunfish.lua/main/modular/"
+
 local PARTS = {
 "core.lua", 
 "search.lua", 
@@ -40,6 +25,7 @@ local PARTS = {
 --"debug2.lua",
 "main.lua"
 }
+
 local MANIFEST_NAME = "manifest.txt" -- fetched alongside the parts below, but it's plain text (not Lua) - kept raw in MANIFEST_CONTENT for checkForUpdate() to read, not load()ed as code
 
 local function fetchURL(url)
