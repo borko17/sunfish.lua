@@ -1,3 +1,4 @@
+
 -- sunfish.lua Chess engine, Lua port chain: 1. Original algorithm: Sunfish (Python) by Thomas Ahle https://github.com/thomasahle/sunfish - BSD license 2. Initial Lua transpilation attributed to Soumith Chintala 3. Extended for Yantra Launcher / Android (Luaj-jse 3.0.1), with UI, save/load, puzzle mode, and search tuning, by borko17 (https://github.com/borko17/sunfish-lua) (with help from Claude AI).
 
 -- CONFIG: Options at the top
@@ -11,7 +12,7 @@ local CHALLENGE_GEN_ATTEMPTS = 400
 local CHALLENGE_HINTS_ENABLED = false -- shows suggested move; toggle with 'th'
 
 local NODES_SEARCHED = 4000 -- node budget/search; soft limit, checked only between depths
-local CHALLENGE_ENGINE_NODES = 600 -- separate, weaker budget for Sunfish's replies in Challenge mode
+local CHALLENGE_ENGINE_NODES = 1000 -- separate, weaker budget for Sunfish's replies in Challenge mode
 local TABLE_SIZE = NODES_SEARCHED * 25 -- scaled off NODES_SEARCHED so it doesn't thrash; upstream's 1e6 too heavy for Luaj-jse on phone
 local MATE_VALUE = 30000 -- exceeds 8*queen+2*(rook+knight+bishop); king value is double this
 local MATE_UPPER = 60000 + (10 * 2529) -- search() scores mate near this, not MATE_VALUE - callers must match
@@ -23,9 +24,11 @@ local function echoS(msg) binding.exec("echo -s " .. msg) end -- success
 local function echoW(msg) binding.exec("echo -w " .. msg) end -- warning/heading
 
 -- Update
-local SCRIPT_VERSION = "2.608302040"
+local SCRIPT_VERSION = "2.608310615"
 local CHANGELOG = {
-   "Added loading messages for hint and position analysis lookups, and per-depth search timing display."
+
+   "Fixed challenge/normal mode game-code loading: replay now uses the saved starting position instead of a stale one, and Sunfish's reply search now runs on the correctly rotated board.",
+
 }
 local GITHUB_RAW_URL = "https://raw.githubusercontent.com/borko17/sunfish.lua/main/docs/update.txt"
 
@@ -1178,7 +1181,7 @@ emptySquareSymbols = USE_UNICODE_PIECES and emptySquareSymbols_unicode or emptyS
 
 -- search.lua ======= end
 
--- ui.lua =======
+-- ui.lua ======= 0755
 
 function updateDisplayMode()
    whiteSymbols = USE_UNICODE_PIECES and whiteSymbols_unicode or whiteSymbols_letters
@@ -1309,7 +1312,13 @@ function printboard(board, lastMove, checkers, guards, isMate, hints)
             sym = c
          end
 
-         if checkers[idx] then
+         if hints[idx] then
+   if #line > 0 then
+      line[#line] = line[#line]:gsub(" $", "")
+   end
+   local q = hints[idx].quote
+   table.insert(line, q .. sym .. q .. " ")
+elseif checkers[idx] then
    if #line > 0 then
       line[#line] = line[#line]:gsub(" $", "")
    end
@@ -1319,12 +1328,6 @@ function printboard(board, lastMove, checkers, guards, isMate, hints)
    else
       table.insert(line, " " .. sym .. "  ")
    end
-elseif hints[idx] then
-   if #line > 0 then
-      line[#line] = line[#line]:gsub(" $", "")
-   end
-   local q = hints[idx].quote
-   table.insert(line, q .. sym .. q .. " ")
 elseif guards[idx] then
    if #line > 0 then
       line[#line] = line[#line]:gsub(" $", "")
@@ -1846,7 +1849,9 @@ function rebuildHistoryFromMoves(histStr, fallbackPos, startBoard)
    end)
 
    if not ok then
-      echoW("Warning: could not replay move history (" .. tostring(err) .. "). Repetition tracking resets from this position.")
+      local msg = tostring(err)
+      local firstLine = msg:match("^[^\n]*") or msg
+      echoW("Warning: could not replay move history (" .. firstLine .. "). Repetition tracking resets from this position.")
       seedFallback()
    end
 
@@ -1871,6 +1876,7 @@ function displayPosition(pos, lastMove, capturedByUser, capturedByEngine, blackM
 end
 
 -- ui.lua ======= end
+
 
 -- help.lua ======= 2224
 
@@ -1924,7 +1930,7 @@ function showHelpCommon()
    print("-------------")
    print("USE_UNICODE_PIECES = true/false")
    print("SHOW_ANNOTATIONS = true/false")
-   print("local NODES_SEARCHED = 4000")
+   print("local NODES_SEARCHED = 2000")
    print("local CHALLENGE_ENGINE_NODES = 600")
    print("")
    echoW("PIECE SYMBOLS:")
@@ -2003,7 +2009,7 @@ function showHelpGame()
    print("     • e.g. 'n8000'")
    print("     • higher N = harder/slower")
    print("     • lower N = easier/faster")
-   print("     • default: n4000")
+   print("     • default: n2000")
    print("'m' - Show move history")
    print("'r' - Resign current game")
    print("'n' - Start a new game")
@@ -2567,7 +2573,7 @@ end
 
 -- mate1.lua ======= end
 
--- challenge.lua ======= 2040
+-- challenge.lua ======= 0615
 
 function withQuietExec(fn)
    local realExec = binding.exec
@@ -2737,6 +2743,7 @@ function playChallengeGame(board, startPos, startLastMove, startCapturedByUser,
                                   startCapturedByEngine, startWhiteMoves, startHalfmoveClock,
                                   startGameHistory, startPositionCounts, startMoveHistory, startBlackMoves)
    local pos = startPos or Position.new(board, 0, {false,false}, {false,false}, 0, 0)
+   local currentStartBoard = board -- starting position used for saves/replay; updated on 'l' load to the loaded code's own start
    local capturedByUser = startCapturedByUser or {}
    local capturedByEngine = startCapturedByEngine or {}
    local lastMove = startLastMove
@@ -2919,7 +2926,7 @@ function playChallengeGame(board, startPos, startLastMove, startCapturedByUser,
                echoW("Node budget set to " .. NODES_SEARCHED)
                echoW("(table size " .. TABLE_SIZE .. ")")
             else
-               echoE("Enter a number between 1000 and 50000, e.g. 'n6000'")
+               echoE("Enter a number between 1000 and 50000, e.g. 'n2000'")
             end
             print("")
             showBoard(checkers, guards, false, false)
@@ -2953,7 +2960,7 @@ function playChallengeGame(board, startPos, startLastMove, startCapturedByUser,
             goto continue
          end
          if crdn == 's' then
-            local code = saveGame(pos, lastMove, capturedByUser, capturedByEngine, whiteMoves, blackMoves, halfmoveClock, "w", moveHistory, board,
+            local code = saveGame(pos, lastMove, capturedByUser, capturedByEngine, whiteMoves, blackMoves, halfmoveClock, "w", moveHistory, currentStartBoard,
                                    {mode = "abc", hints = (hintsOn and "1" or "0")})
             print("----")
             echoW("=== GAME CODE ===")
@@ -2973,7 +2980,7 @@ function playChallengeGame(board, startPos, startLastMove, startCapturedByUser,
                print("")
             else
                local code = saveGame(snap.pos, snap.lastMove, snap.capturedByUser, snap.capturedByEngine,
-                                      snap.whiteMoves, snap.blackMoves, snap.halfmoveClock, snap.nextToMove or "b", snap.moveHistory, board,
+                                      snap.whiteMoves, snap.blackMoves, snap.halfmoveClock, snap.nextToMove or "b", snap.moveHistory, currentStartBoard,
                                       {mode = "abc", hints = (hintsOn and "1" or "0")})
                echoW("=== GAME CODE (as of move " .. n .. ") ===")
                print(code)
@@ -3000,9 +3007,10 @@ function playChallengeGame(board, startPos, startLastMove, startCapturedByUser,
                   halfmoveClock = result[7] or 0
                   local nextToMove = result[8] or "b"
                   local histStr = result[9]
+                  currentStartBoard = result[10] or board
                   moveSnapshots = {}
                   undoSnapshot = nil -- loading a code invalidates any pending undo
-                  gameHistory, positionCounts = rebuildHistoryFromMoves(histStr, pos, board)
+                  gameHistory, positionCounts = rebuildHistoryFromMoves(histStr, pos, currentStartBoard)
                   moveHistory = {}
                   if histStr and histStr ~= '-' and histStr ~= '' then
                      local i = 0
@@ -3032,7 +3040,7 @@ function playChallengeGame(board, startPos, startLastMove, startCapturedByUser,
                      nextToMove = nextToMove,
                   }
 
-                  local reloadCode = saveGame(pos, lastMove, capturedByUser, capturedByEngine, whiteMoves, blackMoves, halfmoveClock, nextToMove, moveHistory, board,
+                  local reloadCode = saveGame(pos, lastMove, capturedByUser, capturedByEngine, whiteMoves, blackMoves, halfmoveClock, nextToMove, moveHistory, currentStartBoard,
                                                {mode = "abc", hints = (hintsOn and "1" or "0")})
                   echoW("=== GAME CODE ===")
                   print(reloadCode)
@@ -3349,7 +3357,7 @@ end
 
 -- challenge.lua ======= end
 
--- main.lua ======= 1740
+-- main.lua ======= 0615
 
 function main()
    local pos = Position.new(initial, 0, {true,true}, {true,true}, 0, 0)
@@ -3478,7 +3486,7 @@ while true do
       echoW("(table size " .. TABLE_SIZE .. ")")
    else
       print("----")
-      echoE("Enter a number between 1000 and 50000, e.g. 'n6000'")
+      echoE("Enter a number between 1000 and 50000, e.g. 'n2000'")
    end
    print("")
    displayPosition(pos, lastMove, capturedByUser, capturedByEngine, blackMoves)
@@ -3611,7 +3619,7 @@ while true do
             local rotated = pos:rotate()
             print("")
             echoW("🐠 Sunfish is thinking...")
-enginemove, score, reachedDepth, usedNodes, elapsed = search(pos, NODES_SEARCHED, gameHistory)
+enginemove, score, reachedDepth, usedNodes, elapsed = search(rotated, NODES_SEARCHED, gameHistory)
 assert(score)
             if PROFILE_PRINT_ENABLED then
                printProfile(elapsed, reachedDepth, usedNodes)
@@ -3922,5 +3930,12 @@ end
 -- main.lua ======= end
 
 
+
+
 math.randomseed(os.time())
-main()
+local ok, err = pcall(main)
+if not ok then
+   local msg = tostring(err)
+   local firstLine = msg:match("^[^\n]*") or msg
+   binding.exec("echo -e " .. firstLine)
+end
