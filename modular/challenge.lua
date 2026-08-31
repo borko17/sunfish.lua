@@ -386,7 +386,7 @@ function playChallengeGame(board, startPos, startLastMove, startCapturedByUser,
          end
          if crdn == 's' then
             local code = saveGame(pos, lastMove, capturedByUser, capturedByEngine, whiteMoves, blackMoves, halfmoveClock, "w", moveHistory, currentStartBoard,
-                                   {mode = "abc", hints = (hintsOn and "1" or "0")})
+                                   {mode = "cg", hints = (hintsOn and "1" or "0")})
             print("----")
             echoW("=== GAME CODE ===")
             print(code)
@@ -406,7 +406,7 @@ function playChallengeGame(board, startPos, startLastMove, startCapturedByUser,
             else
                local code = saveGame(snap.pos, snap.lastMove, snap.capturedByUser, snap.capturedByEngine,
                                       snap.whiteMoves, snap.blackMoves, snap.halfmoveClock, snap.nextToMove or "b", snap.moveHistory, currentStartBoard,
-                                      {mode = "abc", hints = (hintsOn and "1" or "0")})
+                                      {mode = "cg", hints = (hintsOn and "1" or "0")})
                echoW("=== GAME CODE (as of move " .. n .. ") ===")
                print(code)
                echoW("================")
@@ -466,7 +466,7 @@ function playChallengeGame(board, startPos, startLastMove, startCapturedByUser,
                   }
 
                   local reloadCode = saveGame(pos, lastMove, capturedByUser, capturedByEngine, whiteMoves, blackMoves, halfmoveClock, nextToMove, moveHistory, currentStartBoard,
-                                               {mode = "abc", hints = (hintsOn and "1" or "0")})
+                                               {mode = "cg", hints = (hintsOn and "1" or "0")})
                   echoW("=== GAME CODE ===")
                   print(reloadCode)
                   echoW("================")
