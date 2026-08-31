@@ -1,4 +1,4 @@
--- challenge.lua ======= 2040
+-- challenge.lua ======= 0615
 
 function withQuietExec(fn)
    local realExec = binding.exec
@@ -168,6 +168,7 @@ function playChallengeGame(board, startPos, startLastMove, startCapturedByUser,
                                   startCapturedByEngine, startWhiteMoves, startHalfmoveClock,
                                   startGameHistory, startPositionCounts, startMoveHistory, startBlackMoves)
    local pos = startPos or Position.new(board, 0, {false,false}, {false,false}, 0, 0)
+   local currentStartBoard = board -- starting position used for saves/replay; updated on 'l' load to the loaded code's own start
    local capturedByUser = startCapturedByUser or {}
    local capturedByEngine = startCapturedByEngine or {}
    local lastMove = startLastMove
@@ -384,7 +385,7 @@ function playChallengeGame(board, startPos, startLastMove, startCapturedByUser,
             goto continue
          end
          if crdn == 's' then
-            local code = saveGame(pos, lastMove, capturedByUser, capturedByEngine, whiteMoves, blackMoves, halfmoveClock, "w", moveHistory, board,
+            local code = saveGame(pos, lastMove, capturedByUser, capturedByEngine, whiteMoves, blackMoves, halfmoveClock, "w", moveHistory, currentStartBoard,
                                    {mode = "abc", hints = (hintsOn and "1" or "0")})
             print("----")
             echoW("=== GAME CODE ===")
@@ -404,7 +405,7 @@ function playChallengeGame(board, startPos, startLastMove, startCapturedByUser,
                print("")
             else
                local code = saveGame(snap.pos, snap.lastMove, snap.capturedByUser, snap.capturedByEngine,
-                                      snap.whiteMoves, snap.blackMoves, snap.halfmoveClock, snap.nextToMove or "b", snap.moveHistory, board,
+                                      snap.whiteMoves, snap.blackMoves, snap.halfmoveClock, snap.nextToMove or "b", snap.moveHistory, currentStartBoard,
                                       {mode = "abc", hints = (hintsOn and "1" or "0")})
                echoW("=== GAME CODE (as of move " .. n .. ") ===")
                print(code)
@@ -431,9 +432,10 @@ function playChallengeGame(board, startPos, startLastMove, startCapturedByUser,
                   halfmoveClock = result[7] or 0
                   local nextToMove = result[8] or "b"
                   local histStr = result[9]
+                  currentStartBoard = result[10] or board
                   moveSnapshots = {}
                   undoSnapshot = nil -- loading a code invalidates any pending undo
-                  gameHistory, positionCounts = rebuildHistoryFromMoves(histStr, pos, board)
+                  gameHistory, positionCounts = rebuildHistoryFromMoves(histStr, pos, currentStartBoard)
                   moveHistory = {}
                   if histStr and histStr ~= '-' and histStr ~= '' then
                      local i = 0
@@ -463,7 +465,7 @@ function playChallengeGame(board, startPos, startLastMove, startCapturedByUser,
                      nextToMove = nextToMove,
                   }
 
-                  local reloadCode = saveGame(pos, lastMove, capturedByUser, capturedByEngine, whiteMoves, blackMoves, halfmoveClock, nextToMove, moveHistory, board,
+                  local reloadCode = saveGame(pos, lastMove, capturedByUser, capturedByEngine, whiteMoves, blackMoves, halfmoveClock, nextToMove, moveHistory, currentStartBoard,
                                                {mode = "abc", hints = (hintsOn and "1" or "0")})
                   echoW("=== GAME CODE ===")
                   print(reloadCode)
