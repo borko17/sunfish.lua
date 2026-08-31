@@ -1,4 +1,4 @@
--- ui.lua ======= 0615
+-- ui.lua ======= 0755
 
 function updateDisplayMode()
    whiteSymbols = USE_UNICODE_PIECES and whiteSymbols_unicode or whiteSymbols_letters
@@ -666,7 +666,9 @@ function rebuildHistoryFromMoves(histStr, fallbackPos, startBoard)
    end)
 
    if not ok then
-      echoW("Warning: could not replay move history (" .. tostring(err) .. "). Repetition tracking resets from this position.")
+      local msg = tostring(err)
+      local firstLine = msg:match("^[^\n]*") or msg
+      echoW("Warning: could not replay move history (" .. firstLine .. "). Repetition tracking resets from this position.")
       seedFallback()
    end
 
@@ -691,4 +693,3 @@ function displayPosition(pos, lastMove, capturedByUser, capturedByEngine, blackM
 end
 
 -- ui.lua ======= end
-
