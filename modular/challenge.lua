@@ -527,7 +527,8 @@ function playChallengeGame(board, startPos, startLastMove, startCapturedByUser,
                            gameHistory[tpKey(pos)] = true
                            positionCounts[tpKey(pos)] = (positionCounts[tpKey(pos)] or 0) + 1
                            lastMove = {119 - enginemove[1], 119 - enginemove[2]}
-                           print("Sunfish " .. blackMoves .. ". move: \n" .. engineMoveNotation .. " (" .. formatSeconds(elapsed) .. "s) - score: " .. score)
+                           print("Sunfish ".. (blackMoves + 1) ..". move:")
+print(engineMoveNotation .. " (" .. formatSeconds(elapsed) .. "s) - score: " .. score)
                         end
                      end
                   end
