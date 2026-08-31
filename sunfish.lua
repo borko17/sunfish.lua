@@ -24,11 +24,11 @@ local function echoS(msg) binding.exec("echo -s " .. msg) end -- success
 local function echoW(msg) binding.exec("echo -w " .. msg) end -- warning/heading
 
 -- Update
-local SCRIPT_VERSION = "2.608310615"
+local SCRIPT_VERSION = "2.608311926"
 local CHANGELOG = {
 
    "Fixed challenge/normal mode game-code loading: replay now uses the saved starting position instead of a stale one, and Sunfish's reply search now runs on the correctly rotated board.",
-
+   
 }
 local GITHUB_RAW_URL = "https://raw.githubusercontent.com/borko17/sunfish.lua/main/docs/update.txt"
 
@@ -1883,6 +1883,16 @@ end
 -- Common help section shared by all three modes (save formats, display modes, symbols, fonts)
 
 function showHelpCommon()
+   echoW("=== SUNFISH.LUA HELP ===")
+   print("")
+   echoW("PUZZLE GAMES:")
+   print("-------------")
+   print("'m1' - Enter Mate-in-1 puzzle mode")
+   print("'cg' - Enter Challenge Game mode")
+   print("     • " .. CHALLENGE_MIN_PIECES .. "-" .. CHALLENGE_MAX_PIECES .. " random pieces,")
+   print("       play freely vs Sunfish,")
+   print("       no move limit")
+   print("")
    echoW("SAVE-GAME FORMATS:")
    print("-------------")
    print("Load accepts these")
@@ -1978,9 +1988,7 @@ end
 -- Help: normal game
 
 function showHelpGame()
-   print("")
-   echoW("=== CHESS.LUA HELP ===")
-   print("")
+   showHelpCommon()
    echoW("COMMANDS FOR CHESS:")
    print("-------------")
    print("moves - Enter moves in format 'e2e4'")
@@ -2016,21 +2024,16 @@ function showHelpGame()
    print("'u' - Check sunfish.lua for updates")
    print("'q' - Quit chess.lua")
    print("")
-
-   showHelpCommon()
-
-   echoW("↑↑↑ CHESS.LUA HELP ↑↑↑")
+   print("")
+   echoW("↑↑↑ SUNFISH.LUA HELP ↑↑↑")
 end
 
 -- Help: mate-in-1 puzzle mode
 
 function showHelpPuzzle()
-   print("")
-   echoW("=== CHESS.LUA HELP ===")
-   print("")
+   showHelpCommon()
    echoW("COMMANDS FOR PUZZLE MODE:")
    print("-------------")
-   print("'m1' - Enter Mate-in-1 puzzle mode")
    print("'h1' - Hint: which piece type mates")
    print("'h2' - Hint: which square to move from")
    print("'h3' - Hint: which square to mate on")
@@ -2045,28 +2048,20 @@ function showHelpPuzzle()
    print("'?' - Show About screen")
    print("'q' - Leave puzzle mode")
    print("")
-
-   showHelpCommon()
-
-   echoW("↑↑↑ CHESS.LUA HELP ↑↑↑")
+   print("")
+   echoW("↑↑↑ SUNFISH.LUA HELP ↑↑↑")
 end
 
 -- Help: Challenge Game mode
 
 function showHelpChallenge()
-   print("")
-   echoW("=== CHESS.LUA HELP ===")
-   print("")
+   showHelpCommon()
    echoW("COMMANDS FOR CHALLENGE GAME:")
    print("-------------")
-   print("'cg' - Enter Challenge Game mode")
-   print("     • " .. CHALLENGE_MIN_PIECES .. "-" .. CHALLENGE_MAX_PIECES .. " random pieces,")
-   print("       play freely vs Sunfish,")
-   print("       no move limit")
+   print("'th' - Toggle hints on/off")
    print("     • shows a suggested move")
    print("       as an on-board hint")
    print("       to help you learn")
-   print("'th' - Toggle hints on/off")
    print("'z' - Undo your last move")
    print("    • also undoes Sunfish's reply")
    print("    • one level only (no re-undo)")
@@ -2074,12 +2069,24 @@ function showHelpChallenge()
    print("'n' - New position")
    print("'q' - Leave Challenge Game mode")
    print("")
-   print("• All other commands work the same as in a normal game (s/sN/l/m/h/a/d/u/?)")
+   print("'s' - Save current game")
+   print("      (generate code)")
+   print("'sN' - Save position")
+   print("       after history move N")
+   print("     • e.g. 's15' saves the position")
+   print("       after move 15, even if")
+   print("       you have played further.")
+   print("     • 's0' saves the starting position.")
+   print("'l' - Load saved game")
+   print("'m' - Show move history")
+   print("'h' - Show this help screen")
+   print("'a' - Toggle annotations")
+   print("'d' - Toggle display mode")
+   print("'u' - Check sunfish.lua for updates")
+   print("'?' - Show About screen")
    print("")
-
-   showHelpCommon()
-
-   echoW("↑↑↑ CHESS.LUA HELP ↑↑↑")
+   print("")
+   echoW("↑↑↑ SUNFISH.LUA HELP ↑↑↑")
 end
 
 -- Kept for backward-compat: some call sites may still reference the old combined name.
@@ -3102,7 +3109,8 @@ function playChallengeGame(board, startPos, startLastMove, startCapturedByUser,
                            gameHistory[tpKey(pos)] = true
                            positionCounts[tpKey(pos)] = (positionCounts[tpKey(pos)] or 0) + 1
                            lastMove = {119 - enginemove[1], 119 - enginemove[2]}
-                           print("Sunfish " .. blackMoves .. ". move: \n" .. engineMoveNotation .. " (" .. formatSeconds(elapsed) .. "s) - score: " .. score)
+                           print("Sunfish ".. (blackMoves + 1) ..". move:")
+print(engineMoveNotation .. " (" .. formatSeconds(elapsed) .. "s) - score: " .. score)
                         end
                      end
                   end
@@ -3286,7 +3294,8 @@ function playChallengeGame(board, startPos, startLastMove, startCapturedByUser,
          engineMoveNotation = engineMoveNotation .. enginemove[3]:lower()
       end
       table.insert(moveHistory, {notation = engineMoveNotation, by = "sunfish"})
-      print("Sunfish " .. (blackMoves + 1) .. ". move: \n" .. engineMoveNotation .. " (" .. formatSeconds(elapsed) .. "s) - score: " .. score)
+      print("Sunfish ".. (blackMoves + 1) ..". move:")
+print(engineMoveNotation .. " (" .. formatSeconds(elapsed) .. "s) - score: " .. score)
       -- IMPORTANT: Sunfish's move must be applied before computing the next position, history, or board display.
       pos = pos:move(enginemove)
       pos.score = 0
@@ -3887,7 +3896,8 @@ assert(score)
       if enginemove[3] and enginemove[3] ~= '' and enginemove[3] ~= 'Q' then
          engineMoveNotation = engineMoveNotation .. enginemove[3]:lower()
       end
-print("Sunfish ".. (blackMoves + 1) ..". move: \n" .. engineMoveNotation .. " (" .. formatSeconds(elapsed) .. "s) - score: " .. score)
+print("Sunfish ".. (blackMoves + 1) ..". move:")
+print(engineMoveNotation .. " (" .. formatSeconds(elapsed) .. "s) - score: " .. score)
 print("Captured: " .. renderCaptured(capturedByEngine, whiteSymbols))
 table.insert(moveHistory, {notation = engineMoveNotation, by = "sunfish"})
 pos = pos:move(enginemove)
@@ -3928,9 +3938,6 @@ positionCounts[tpKey(pos)] = (positionCounts[tpKey(pos)] or 0) + 1
 end
 
 -- main.lua ======= end
-
-
-
 
 math.randomseed(os.time())
 local ok, err = pcall(main)
