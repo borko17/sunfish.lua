@@ -1601,7 +1601,7 @@ function saveGame(pos, lastMove, capturedByUser, capturedByEngine, whiteMoves, b
       startBoardStr = compressSaveRows(table.concat(sbLines, '\n'))
    end
 
--- extra: optional metadata table embedded in the code, e.g. {mode="abc", hints="1"} for Challenge Game saves; unknown fields silently ignored by loadGame() for backward compat
+-- extra: optional metadata table embedded in the code, e.g. {mode="cg", hints="1"} for Challenge Game saves; unknown fields silently ignored by loadGame() for backward compat
    local extraStr = ''
    if extra then
       if extra.mode then extraStr = extraStr .. '|mode:' .. extra.mode end
@@ -2961,7 +2961,7 @@ function playChallengeGame(board, startPos, startLastMove, startCapturedByUser,
          end
          if crdn == 's' then
             local code = saveGame(pos, lastMove, capturedByUser, capturedByEngine, whiteMoves, blackMoves, halfmoveClock, "w", moveHistory, currentStartBoard,
-                                   {mode = "abc", hints = (hintsOn and "1" or "0")})
+                                   {mode = "cg", hints = (hintsOn and "1" or "0")})
             print("----")
             echoW("=== GAME CODE ===")
             print(code)
@@ -2981,7 +2981,7 @@ function playChallengeGame(board, startPos, startLastMove, startCapturedByUser,
             else
                local code = saveGame(snap.pos, snap.lastMove, snap.capturedByUser, snap.capturedByEngine,
                                       snap.whiteMoves, snap.blackMoves, snap.halfmoveClock, snap.nextToMove or "b", snap.moveHistory, currentStartBoard,
-                                      {mode = "abc", hints = (hintsOn and "1" or "0")})
+                                      {mode = "cg", hints = (hintsOn and "1" or "0")})
                echoW("=== GAME CODE (as of move " .. n .. ") ===")
                print(code)
                echoW("================")
@@ -3041,7 +3041,7 @@ function playChallengeGame(board, startPos, startLastMove, startCapturedByUser,
                   }
 
                   local reloadCode = saveGame(pos, lastMove, capturedByUser, capturedByEngine, whiteMoves, blackMoves, halfmoveClock, nextToMove, moveHistory, currentStartBoard,
-                                               {mode = "abc", hints = (hintsOn and "1" or "0")})
+                                               {mode = "cg", hints = (hintsOn and "1" or "0")})
                   echoW("=== GAME CODE ===")
                   print(reloadCode)
                   echoW("================")
@@ -3547,7 +3547,7 @@ while true do
    if code and code ~= '' then
       local result = {loadGame(code)}
       if result[1] then
-         if result[11] == "abc" then
+         if result[11] == "cg" then
             echoW("Note: this code was saved from Challenge Game (type 'cg' then 'l' there to resume with hints).")
          end
          pos = result[1]
