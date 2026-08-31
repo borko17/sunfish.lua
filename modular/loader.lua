@@ -15,6 +15,7 @@
 local BASE_URL = "https://raw.githubusercontent.com/borko17/sunfish.lua/main/modular/"
 
 local PARTS = {
+"config.lua",
 "core.lua", 
 "search.lua", 
 "ui.lua", 
