@@ -712,7 +712,8 @@ print(engineMoveNotation .. " (" .. formatSeconds(elapsed) .. "s) - score: " .. 
          engineMoveNotation = engineMoveNotation .. enginemove[3]:lower()
       end
       table.insert(moveHistory, {notation = engineMoveNotation, by = "sunfish"})
-      print("Sunfish " .. (blackMoves + 1) .. ". move: \n" .. engineMoveNotation .. " (" .. formatSeconds(elapsed) .. "s) - score: " .. score)
+      print("Sunfish ".. (blackMoves + 1) ..". move:")
+print(engineMoveNotation .. " (" .. formatSeconds(elapsed) .. "s) - score: " .. score)
       -- IMPORTANT: Sunfish's move must be applied before computing the next position, history, or board display.
       pos = pos:move(enginemove)
       pos.score = 0
