@@ -1,4 +1,4 @@
--- ui.lua =======
+-- ui.lua ======= 0615
 
 function updateDisplayMode()
    whiteSymbols = USE_UNICODE_PIECES and whiteSymbols_unicode or whiteSymbols_letters
@@ -129,7 +129,13 @@ function printboard(board, lastMove, checkers, guards, isMate, hints)
             sym = c
          end
 
-         if checkers[idx] then
+         if hints[idx] then
+   if #line > 0 then
+      line[#line] = line[#line]:gsub(" $", "")
+   end
+   local q = hints[idx].quote
+   table.insert(line, q .. sym .. q .. " ")
+elseif checkers[idx] then
    if #line > 0 then
       line[#line] = line[#line]:gsub(" $", "")
    end
@@ -139,12 +145,6 @@ function printboard(board, lastMove, checkers, guards, isMate, hints)
    else
       table.insert(line, " " .. sym .. "  ")
    end
-elseif hints[idx] then
-   if #line > 0 then
-      line[#line] = line[#line]:gsub(" $", "")
-   end
-   local q = hints[idx].quote
-   table.insert(line, q .. sym .. q .. " ")
 elseif guards[idx] then
    if #line > 0 then
       line[#line] = line[#line]:gsub(" $", "")
