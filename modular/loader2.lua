@@ -33,13 +33,13 @@ local BASE_URL = "https://raw.githubusercontent.com/borko17/sunfish.lua/main/mod
 local PARTS = {
 "core.lua", 
 "search.lua", 
-"ui.lua", 
-"help.lua", 
-"mate1.lua", 
-"challenge.lua", 
+"ui2.lua", 
+"help2.lua", 
+"mate12.lua", 
+"challenge2.lua", 
 --"debug.lua", 
 --"debug2.lua",
-"main.lua"
+"main2.lua"
 }
 local MANIFEST_NAME = "manifest.txt" -- fetched alongside the parts below, but it's plain text (not Lua) - kept raw in MANIFEST_CONTENT for checkForUpdate() to read, not load()ed as code
 
