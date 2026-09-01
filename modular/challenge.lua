@@ -1,4 +1,4 @@
--- challenge.lua ======= 0615
+-- challenge.lua ======= 1550
 
 function withQuietExec(fn)
    local realExec = binding.exec
@@ -334,10 +334,9 @@ function playChallengeGame(board, startPos, startLastMove, startCapturedByUser,
             goto continue
          end
          if crdn == 'd' then
-            USE_UNICODE_PIECES = not USE_UNICODE_PIECES
-            updateDisplayMode()
+            local modeName = cycleDisplayMode()
             print("----")
-            echoW("Display mode: " .. (USE_UNICODE_PIECES and "Unicode" or "Letters"))
+            echoW("Display mode: " .. modeName)
             showBoard(checkers, guards, false, false)
             print("Captured: " .. renderCaptured(capturedByUser, blackSymbols))
             goto continue
