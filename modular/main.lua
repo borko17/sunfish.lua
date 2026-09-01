@@ -1,4 +1,4 @@
--- main.lua ======= 0615
+-- main.lua ======= 1550
 
 function main()
    local pos = Position.new(initial, 0, {true,true}, {true,true}, 0, 0)
@@ -77,10 +77,9 @@ while true do
    echoW("Annotations: " .. (SHOW_ANNOTATIONS and "ON" or "OFF"))
    displayPosition(pos, lastMove, capturedByUser, capturedByEngine, blackMoves)
    elseif crdn == 'd' then
-      USE_UNICODE_PIECES = not USE_UNICODE_PIECES
-      updateDisplayMode()
+      local modeName = cycleDisplayMode()
       print("----")
-      echoW("Display mode: " .. (USE_UNICODE_PIECES and "Unicode" or "Letters"))
+      echoW("Display mode: " .. modeName)
       displayPosition(pos, lastMove, capturedByUser, capturedByEngine, blackMoves)
    elseif crdn == 'z' then
       print("----")
