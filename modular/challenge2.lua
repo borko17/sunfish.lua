@@ -334,19 +334,9 @@ function playChallengeGame(board, startPos, startLastMove, startCapturedByUser,
             goto continue
          end
          if crdn == 'd' then
-            USE_UNICODE_PIECES = not USE_UNICODE_PIECES
-            updateDisplayMode()
+            local modeName = cycleDisplayMode()
             print("----")
-            echoW("Display mode: " .. (USE_UNICODE_PIECES and "Unicode" or "Letters"))
-            showBoard(checkers, guards, false, false)
-            print("Captured: " .. renderCaptured(capturedByUser, blackSymbols))
-            goto continue
-         end
-         if crdn == 'i' then
-            INVERT_PIECE_COLORS = not INVERT_PIECE_COLORS
-            updateDisplayMode()
-            print("----")
-            echoW("Piece colors: " .. (INVERT_PIECE_COLORS and "Inverted" or "Normal"))
+            echoW("Display mode: " .. modeName)
             showBoard(checkers, guards, false, false)
             print("Captured: " .. renderCaptured(capturedByUser, blackSymbols))
             goto continue
