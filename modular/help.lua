@@ -1,4 +1,4 @@
--- help.lua ======= 2130
+-- help.lua ======= 1550
 
 -- Common help section shared by all three modes (save formats, display modes, symbols, fonts)
 
@@ -107,7 +107,7 @@ function showHelpGame()
    print("'h' - Show this help screen")
    print("'?' - Show About screen")
    print("'d' - Toggle display mode")
-   print("    • Unicode symbols <-> Letters.")
+   print("    • Letters -> Unicode -> Unicode (inverted).")
    print("'a' - Toggle annotations")
    print("    • show/hide board markers.")
    print("'z' - Undo your last move")
