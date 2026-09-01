@@ -5,7 +5,7 @@ function updateDisplayMode()
    blackSymbols = USE_UNICODE_PIECES and blackSymbols_unicode or blackSymbols_letters
    emptySquareSymbols = USE_UNICODE_PIECES and emptySquareSymbols_unicode or emptySquareSymbols_letters
 
-   if INVERT_PIECE_COLORS then
+   if INVERT_PIECE_COLORS and USE_UNICODE_PIECES then
       whiteSymbols, blackSymbols = blackSymbols, whiteSymbols
    end
 end
@@ -115,20 +115,10 @@ function printboard(board, lastMove, checkers, guards, isMate, hints)
                sym = emptySquareSymbols.dark
             end
          elseif USE_UNICODE_PIECES then
-            if c == 'K' then sym = '\xe2\x99\x9a'
-            elseif c == 'Q' then sym = '\xe2\x99\x9b'
-            elseif c == 'R' then sym = '\xe2\x99\x9c'
-            elseif c == 'B' then sym = '\xe2\x99\x9d'
-            elseif c == 'N' then sym = '\xe2\x99\x9e'
-            elseif c == 'P' then sym = '\xe2\x99\x9f'
-            elseif c == 'k' then sym = '\xe2\x99\x94'
-            elseif c == 'q' then sym = '\xe2\x99\x95'
-            elseif c == 'r' then sym = '\xe2\x99\x96'
-            elseif c == 'b' then sym = '\xe2\x99\x97'
-            elseif c == 'n' then sym = '\xe2\x99\x98'
-            elseif c == 'p' then sym = '\xe2\x99\x99'
-            else sym = c
-            end
+            local isWhitePiece = c:match('%u') ~= nil -- uppercase = white piece
+            local upperC = c:upper()
+            local set = isWhitePiece and whiteSymbols or blackSymbols
+            sym = set[upperC] or c
          else
             sym = c
          end
