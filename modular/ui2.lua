@@ -7,6 +7,7 @@ function updateDisplayMode()
 
    if INVERT_PIECE_COLORS and USE_UNICODE_PIECES then
       whiteSymbols, blackSymbols = blackSymbols, whiteSymbols
+      emptySquareSymbols = { light = emptySquareSymbols.dark, dark = emptySquareSymbols.light }
    end
 end
 
