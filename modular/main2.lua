@@ -77,16 +77,9 @@ while true do
    echoW("Annotations: " .. (SHOW_ANNOTATIONS and "ON" or "OFF"))
    displayPosition(pos, lastMove, capturedByUser, capturedByEngine, blackMoves)
    elseif crdn == 'd' then
-      USE_UNICODE_PIECES = not USE_UNICODE_PIECES
-      updateDisplayMode()
+      local modeName = cycleDisplayMode()
       print("----")
-      echoW("Display mode: " .. (USE_UNICODE_PIECES and "Unicode" or "Letters"))
-      displayPosition(pos, lastMove, capturedByUser, capturedByEngine, blackMoves)
-   elseif crdn == 'i' then
-      INVERT_PIECE_COLORS = not INVERT_PIECE_COLORS
-      updateDisplayMode()
-      print("----")
-      echoW("Piece colors: " .. (INVERT_PIECE_COLORS and "Inverted" or "Normal"))
+      echoW("Display mode: " .. modeName)
       displayPosition(pos, lastMove, capturedByUser, capturedByEngine, blackMoves)
    elseif crdn == 'z' then
       print("----")
