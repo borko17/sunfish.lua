@@ -1,4 +1,4 @@
--- mate1.lua ======= 1300
+-- mate1.lua ======= 1550
 
 -- AI puzzle mode ("m1")
 
@@ -186,10 +186,9 @@ function attemptAiPuzzle(board)
    return false, false, board
    end
    if crdn == 'd' then
-   USE_UNICODE_PIECES = not USE_UNICODE_PIECES
-   updateDisplayMode()
+   local modeName = cycleDisplayMode()
    print("----")
-   echoW("Mode: " .. (USE_UNICODE_PIECES and "Unicode" or "Letters"))
+   echoW("Mode: " .. modeName)
    return false, false, board
 end
 
