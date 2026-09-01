@@ -1,6 +1,7 @@
 | Modularni fajlovi |
 |---|
-| CONFIG + `loader.lua` |
+| `loader.lua` |
+| `config.lua` |
 | `core.lua` |
 | `search.lua` |
 | `ui.lua` |
