@@ -186,18 +186,9 @@ function attemptAiPuzzle(board)
    return false, false, board
    end
    if crdn == 'd' then
-   USE_UNICODE_PIECES = not USE_UNICODE_PIECES
-   updateDisplayMode()
+   local modeName = cycleDisplayMode()
    print("----")
-   echoW("Mode: " .. (USE_UNICODE_PIECES and "Unicode" or "Letters"))
-   return false, false, board
-end
-
-if crdn == 'i' then
-   INVERT_PIECE_COLORS = not INVERT_PIECE_COLORS
-   updateDisplayMode()
-   print("----")
-   echoW("Piece colors: " .. (INVERT_PIECE_COLORS and "Inverted" or "Normal"))
+   echoW("Mode: " .. modeName)
    return false, false, board
 end
 
