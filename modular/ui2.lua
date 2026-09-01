@@ -11,6 +11,27 @@ function updateDisplayMode()
    end
 end
 
+-- Cycles: Letters -> Unicode -> Unicode Inverted -> Letters
+function cycleDisplayMode()
+   if not USE_UNICODE_PIECES then
+      USE_UNICODE_PIECES = true
+      INVERT_PIECE_COLORS = false
+   elseif not INVERT_PIECE_COLORS then
+      INVERT_PIECE_COLORS = true
+   else
+      USE_UNICODE_PIECES = false
+      INVERT_PIECE_COLORS = false
+   end
+   updateDisplayMode()
+   if USE_UNICODE_PIECES and INVERT_PIECE_COLORS then
+      return "Unicode (inverted)"
+   elseif USE_UNICODE_PIECES then
+      return "Unicode"
+   else
+      return "Letters"
+   end
+end
+
 -- User interface
 
 function parse(c)
