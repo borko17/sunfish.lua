@@ -100,7 +100,7 @@ Enter `m1` to start the Mate-in-1 puzzle generator. The program generates a posi
 | `n` | Generate a new puzzle |
 | `q` | Exit puzzle mode and return to normal game |
 
-### Challenge mode
+## Challenge mode
 
 Challenge mode (`cg`) generates a random mid-game position (`CHALLENGE_MIN_PIECES`–`CHALLENGE_MAX_PIECES` pieces on the board) and plays it against a weaker engine (`CHALLENGE_ENGINE_NODES` node budget), for practicing specific kinds of positions rather than full games.
 
