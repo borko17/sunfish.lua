@@ -236,10 +236,6 @@ When enabled, annotations can display additional board information such as last 
 
 When a pawn reaches the last rank, the player can select `Q`, `R`, `B`, or `N`. Underpromotion is therefore supported instead of automatically promoting every pawn to a queen.
 
-## Update checker
-
-The command `u` checks for a newer version of sunfish.lua against the project's remote repository from within the Yantra Launcher Pro environment.
-
 ## Screenshots
 
 Letters mode:
