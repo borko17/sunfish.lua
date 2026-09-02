@@ -85,6 +85,10 @@ n4000
 
 uses a 4000-node search budget. Lower N is faster but weaker, higher N is slower but stronger. The available range is `n1000` to `n50000`. Actual playing strength depends on the position and device performance.
 
+## Mate-in-1 puzzle mode
+
+Enter `m1` to start the Mate-in-1 puzzle generator. The program generates a position where the side to move has a legal mate in one and verifies the generated position before presenting it.
+
 ### Mate-in-1 puzzle mode commands
 
 | Key | Action |
@@ -184,10 +188,6 @@ rnbqkbnr;pppppppp;8;8;8;8;PPPPPPPP;RNBQKBNR
 ```
 
 represents the normal starting position. The full save format wraps this board representation together with additional game-state fields.
-
-## Mate-in-1 puzzle mode
-
-Enter `m1` to start the Mate-in-1 puzzle generator. The program generates a position where the side to move has a legal mate in one and verifies the generated position before presenting it.
 
 Hints (progressive):
 
