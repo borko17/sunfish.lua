@@ -6,10 +6,10 @@
 USE_UNICODE_PIECES = false
 SHOW_ANNOTATIONS = true
 
-NODES_SEARCHED = 4000 -- node budget/search; soft limit, checked only between depths
+NODES_SEARCHED = 50000 -- node budget/search; soft limit, checked only between depths
 TABLE_SIZE = NODES_SEARCHED * 25 -- scaled off NODES_SEARCHED so it doesn't thrash; upstream's 1e6 too heavy for Luaj-jse on phone
 
-CHALLENGE_ENGINE_NODES = 1000 -- separate, weaker budget for Sunfish's replies in Challenge mode
+CHALLENGE_ENGINE_NODES = 50000 -- separate, weaker budget for Sunfish's replies in Challenge mode
 CHALLENGE_MIN_PIECES = 10
 CHALLENGE_MAX_PIECES = 20
 CHALLENGE_GEN_ATTEMPTS = 400
@@ -24,13 +24,15 @@ local function echoE(msg) binding.exec("echo -e " .. msg) end -- error
 local function echoS(msg) binding.exec("echo -s " .. msg) end -- success
 local function echoW(msg) binding.exec("echo -w " .. msg) end -- warning/heading
 
--- Update
-local SCRIPT_VERSION = "2.608311926"
-local CHANGELOG = {
 
-   "Fixed challenge/normal mode game-code loading: replay now uses the saved starting position instead of a stale one, and Sunfish's reply search now runs on the correctly rotated board.",
-   
+SCRIPT_VERSION = "2.609011550"
+
+CHANGELOG = {
+
+   "'d' now cycles through three display modes (Letters -> Unicode -> Unicode inverted) instead of a simple toggle, swapping light/dark piece and empty-square symbols for dark-background themes.",
+
 }
+
 local GITHUB_RAW_URL = "https://raw.githubusercontent.com/borko17/sunfish.lua/main/docs/update.txt"
 
 -- Extracts CHANGELOG table from raw script text (so 'u' shows the remote version's changelog)
@@ -809,7 +811,7 @@ NULL_MARGIN = -200
 -- core.lua ======= end
 
 
--- search.lua ======= 1300
+-- search-- search.lua ======= 1550
 
 function search(pos, maxn, history)
    maxn = maxn or NODES_SEARCHED
@@ -1176,18 +1178,46 @@ blackSymbols_letters = {
    K = 'k', Q = 'q', R = 'r', B = 'b', N = 'n', P = 'p',
 }
 
+INVERT_PIECE_COLORS = false
+
 whiteSymbols = USE_UNICODE_PIECES and whiteSymbols_unicode or whiteSymbols_letters
 blackSymbols = USE_UNICODE_PIECES and blackSymbols_unicode or blackSymbols_letters
 emptySquareSymbols = USE_UNICODE_PIECES and emptySquareSymbols_unicode or emptySquareSymbols_letters
 
 -- search.lua ======= end
 
--- ui.lua ======= 0755
+-- ui.lua ======= 1550
 
 function updateDisplayMode()
    whiteSymbols = USE_UNICODE_PIECES and whiteSymbols_unicode or whiteSymbols_letters
    blackSymbols = USE_UNICODE_PIECES and blackSymbols_unicode or blackSymbols_letters
    emptySquareSymbols = USE_UNICODE_PIECES and emptySquareSymbols_unicode or emptySquareSymbols_letters
+
+   if INVERT_PIECE_COLORS and USE_UNICODE_PIECES then
+      whiteSymbols, blackSymbols = blackSymbols, whiteSymbols
+      emptySquareSymbols = { light = emptySquareSymbols.dark, dark = emptySquareSymbols.light }
+   end
+end
+
+-- Cycles: Letters -> Unicode -> Unicode Inverted -> Letters
+function cycleDisplayMode()
+   if not USE_UNICODE_PIECES then
+      USE_UNICODE_PIECES = true
+      INVERT_PIECE_COLORS = false
+   elseif not INVERT_PIECE_COLORS then
+      INVERT_PIECE_COLORS = true
+   else
+      USE_UNICODE_PIECES = false
+      INVERT_PIECE_COLORS = false
+   end
+   updateDisplayMode()
+   if USE_UNICODE_PIECES and INVERT_PIECE_COLORS then
+      return "Unicode (inverted)"
+   elseif USE_UNICODE_PIECES then
+      return "Unicode"
+   else
+      return "Letters"
+   end
 end
 
 -- User interface
@@ -1295,20 +1325,10 @@ function printboard(board, lastMove, checkers, guards, isMate, hints)
                sym = emptySquareSymbols.dark
             end
          elseif USE_UNICODE_PIECES then
-            if c == 'K' then sym = '\xe2\x99\x9a'
-            elseif c == 'Q' then sym = '\xe2\x99\x9b'
-            elseif c == 'R' then sym = '\xe2\x99\x9c'
-            elseif c == 'B' then sym = '\xe2\x99\x9d'
-            elseif c == 'N' then sym = '\xe2\x99\x9e'
-            elseif c == 'P' then sym = '\xe2\x99\x9f'
-            elseif c == 'k' then sym = '\xe2\x99\x94'
-            elseif c == 'q' then sym = '\xe2\x99\x95'
-            elseif c == 'r' then sym = '\xe2\x99\x96'
-            elseif c == 'b' then sym = '\xe2\x99\x97'
-            elseif c == 'n' then sym = '\xe2\x99\x98'
-            elseif c == 'p' then sym = '\xe2\x99\x99'
-            else sym = c
-            end
+            local isWhitePiece = c:match('%u') ~= nil -- uppercase = white piece
+            local upperC = c:upper()
+            local set = isWhitePiece and whiteSymbols or blackSymbols
+            sym = set[upperC] or c
          else
             sym = c
          end
@@ -1602,7 +1622,7 @@ function saveGame(pos, lastMove, capturedByUser, capturedByEngine, whiteMoves, b
       startBoardStr = compressSaveRows(table.concat(sbLines, '\n'))
    end
 
--- extra: optional metadata table embedded in the code, e.g. {mode="cg", hints="1"} for Challenge Game saves; unknown fields silently ignored by loadGame() for backward compat
+-- extra: optional metadata table embedded in the code, e.g. {mode="abc", hints="1"} for Challenge Game saves; unknown fields silently ignored by loadGame() for backward compat
    local extraStr = ''
    if extra then
       if extra.mode then extraStr = extraStr .. '|mode:' .. extra.mode end
@@ -1879,7 +1899,7 @@ end
 -- ui.lua ======= end
 
 
--- help.lua ======= 2224
+-- help.lua ======= 1550
 
 -- Common help section shared by all three modes (save formats, display modes, symbols, fonts)
 
@@ -1988,7 +2008,7 @@ function showHelpGame()
    print("'h' - Show this help screen")
    print("'?' - Show About screen")
    print("'d' - Toggle display mode")
-   print("    • Unicode symbols <-> Letters.")
+   print("    • Letters -> Unicode -> Unicode (inverted).")
    print("'a' - Toggle annotations")
    print("    • show/hide board markers.")
    print("'z' - Undo your last move")
@@ -2169,7 +2189,7 @@ end
 
 -- help.lua ======= end
 
--- mate1.lua ======= 1300
+-- mate1.lua ======= 1550
 
 -- AI puzzle mode ("m1")
 
@@ -2357,10 +2377,9 @@ function attemptAiPuzzle(board)
    return false, false, board
    end
    if crdn == 'd' then
-   USE_UNICODE_PIECES = not USE_UNICODE_PIECES
-   updateDisplayMode()
+   local modeName = cycleDisplayMode()
    print("----")
-   echoW("Mode: " .. (USE_UNICODE_PIECES and "Unicode" or "Letters"))
+   echoW("Mode: " .. modeName)
    return false, false, board
 end
 
@@ -2578,7 +2597,7 @@ end
 
 -- mate1.lua ======= end
 
--- challenge.lua ======= 0615
+-- challenge.lua ======= 1550
 
 function withQuietExec(fn)
    local realExec = binding.exec
@@ -2914,10 +2933,9 @@ function playChallengeGame(board, startPos, startLastMove, startCapturedByUser,
             goto continue
          end
          if crdn == 'd' then
-            USE_UNICODE_PIECES = not USE_UNICODE_PIECES
-            updateDisplayMode()
+            local modeName = cycleDisplayMode()
             print("----")
-            echoW("Display mode: " .. (USE_UNICODE_PIECES and "Unicode" or "Letters"))
+            echoW("Display mode: " .. modeName)
             showBoard(checkers, guards, false, false)
             print("Captured: " .. renderCaptured(capturedByUser, blackSymbols))
             goto continue
@@ -3364,7 +3382,7 @@ end
 
 -- challenge.lua ======= end
 
--- main.lua ======= 0615
+-- main.lua ======= 1550
 
 function main()
    local pos = Position.new(initial, 0, {true,true}, {true,true}, 0, 0)
@@ -3443,10 +3461,9 @@ while true do
    echoW("Annotations: " .. (SHOW_ANNOTATIONS and "ON" or "OFF"))
    displayPosition(pos, lastMove, capturedByUser, capturedByEngine, blackMoves)
    elseif crdn == 'd' then
-      USE_UNICODE_PIECES = not USE_UNICODE_PIECES
-      updateDisplayMode()
+      local modeName = cycleDisplayMode()
       print("----")
-      echoW("Display mode: " .. (USE_UNICODE_PIECES and "Unicode" or "Letters"))
+      echoW("Display mode: " .. modeName)
       displayPosition(pos, lastMove, capturedByUser, capturedByEngine, blackMoves)
    elseif crdn == 'z' then
       print("----")
