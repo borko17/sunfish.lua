@@ -76,10 +76,14 @@ function main(playAsBlack)
             halfmoveClock = halfmoveClock + 1
          end
          if engineCap then table.insert(capturedByEngine, engineCap) end
-         -- Convert engine move to absolute coordinates for display
-         local absFrom = 119 - enginemove[1]
-         local absTo = 119 - enginemove[2]
-         local engineMoveNotation = render(absFrom) .. render(absTo)
+-- render() expects the position expressed the way the user's OWN move
+-- coordinates are (see parse(): it flips fil/rank for PLAYER_IS_BLACK).
+-- enginemove is in `rotated`'s absolute/White-view system, so it needs
+-- the 119-x complement before render() - same complement pos.board keeps
+-- using afterwards, so lastMove/highlight get the identical value.
+         local notFrom = 119 - enginemove[1]
+         local notTo = 119 - enginemove[2]
+         local engineMoveNotation = render(notFrom) .. render(notTo)
          if enginemove[3] and enginemove[3] ~= '' and enginemove[3] ~= 'Q' then
             engineMoveNotation = engineMoveNotation .. enginemove[3]:lower()
          end
@@ -89,8 +93,8 @@ function main(playAsBlack)
          pos.score = 0
          gameHistory[tpKey(pos)] = true
          positionCounts[tpKey(pos)] = (positionCounts[tpKey(pos)] or 0) + 1
-         -- Store lastMove in absolute coordinates
-         lastMove = {absFrom, absTo}
+         -- lastMove/highlight use the same 119-x coordinates as the notation above
+         lastMove = {notFrom, notTo}
          moveSnapshots[0].pos = pos
          moveSnapshots[0].lastMove = lastMove
          moveSnapshots[0].capturedByEngine = {table.unpack(capturedByEngine)}
@@ -341,10 +345,12 @@ assert(score)
                   halfmoveClock = halfmoveClock + 1
                end
                if engineCap then table.insert(capturedByEngine, engineCap) end
-               -- Convert engine move to absolute coordinates for display
-               local absFrom = 119 - enginemove[1]
-               local absTo = 119 - enginemove[2]
-               local engineMoveNotation = render(absFrom) .. render(absTo)
+               -- Same convention as the very first Sunfish move: enginemove
+               -- is in rotated's absolute/White-view system, so both
+               -- render() and lastMove/highlight need the 119-x complement.
+               local notFrom = 119 - enginemove[1]
+               local notTo = 119 - enginemove[2]
+               local engineMoveNotation = render(notFrom) .. render(notTo)
                if enginemove[3] and enginemove[3] ~= '' and enginemove[3] ~= 'Q' then
                   engineMoveNotation = engineMoveNotation .. enginemove[3]:lower()
                end
@@ -356,7 +362,7 @@ assert(score)
                pos.score = 0
                gameHistory[tpKey(pos)] = true
                positionCounts[tpKey(pos)] = (positionCounts[tpKey(pos)] or 0) + 1
-               lastMove = {absFrom, absTo}
+               lastMove = {notFrom, notTo}
             else
                echoW("Sunfish has no legal move (checkmate or stalemate).")
             end
@@ -589,10 +595,14 @@ assert(score)
       end
       if engineCap then table.insert(capturedByEngine, engineCap) end
 
-      -- Convert engine move to absolute coordinates for display
-      local absFrom = 119 - enginemove[1]
-      local absTo = 119 - enginemove[2]
-      local engineMoveNotation = render(absFrom) .. render(absTo)
+      -- pos here (before this move) is in absolute White-view coordinates
+      -- (each move() rotation cancels out in pairs over a full round), same
+      -- as the very first Sunfish move above - render() needs the 119-x
+      -- complement, and so does lastMove/highlight once pos.board rotates
+      -- back to the user's (Black) view after this move is applied.
+      local notFrom = 119 - enginemove[1]
+      local notTo = 119 - enginemove[2]
+      local engineMoveNotation = render(notFrom) .. render(notTo)
       if enginemove[3] and enginemove[3] ~= '' and enginemove[3] ~= 'Q' then
          engineMoveNotation = engineMoveNotation .. enginemove[3]:lower()
       end
@@ -605,7 +615,7 @@ blackMoves = blackMoves + 1
 pos.score = 0  -- CRITICAL!
 gameHistory[tpKey(pos)] = true
 positionCounts[tpKey(pos)] = (positionCounts[tpKey(pos)] or 0) + 1
-      lastMove = {absFrom, absTo}
+      lastMove = {notFrom, notTo}
 
       if hasInsufficientMaterial(pos.board) then
          printboard(arrayToBoard(pos.board), lastMove, {}, {})
