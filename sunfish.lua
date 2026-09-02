@@ -4,6 +4,7 @@
 -- CONFIG: Options at the top
 --------------------
 USE_UNICODE_PIECES = false
+USE_UNICODE_INVERTED_PIECES = false
 SHOW_ANNOTATIONS = true
 
 NODES_SEARCHED = 4000 -- node budget/search; soft limit, checked only between depths
@@ -795,7 +796,7 @@ function findCheckers(p)
    return checkers
 end
 
--- Search logic
+-- -Search logic
 nodes = 0 -- module-scoped: shared by search()'s loop and the inner bound() closure
 
 -- Quiescence value floor: deeper nodes admit slightly weaker captures/threats before cutting off
@@ -811,7 +812,7 @@ NULL_MARGIN = -200
 -- core.lua ======= end
 
 
--- search-- search.lua ======= 1550
+-- search.lua ======= 1300
 
 function search(pos, maxn, history)
    maxn = maxn or NODES_SEARCHED
@@ -1178,22 +1179,27 @@ blackSymbols_letters = {
    K = 'k', Q = 'q', R = 'r', B = 'b', N = 'n', P = 'p',
 }
 
-INVERT_PIECE_COLORS = false
-
 whiteSymbols = USE_UNICODE_PIECES and whiteSymbols_unicode or whiteSymbols_letters
 blackSymbols = USE_UNICODE_PIECES and blackSymbols_unicode or blackSymbols_letters
 emptySquareSymbols = USE_UNICODE_PIECES and emptySquareSymbols_unicode or emptySquareSymbols_letters
 
 -- search.lua ======= end
 
--- ui.lua ======= 1550
+
+
+
+-- ui.lua ======= 0755
 
 function updateDisplayMode()
+   if USE_UNICODE_INVERTED_PIECES then
+      USE_UNICODE_PIECES = true
+   end
+
    whiteSymbols = USE_UNICODE_PIECES and whiteSymbols_unicode or whiteSymbols_letters
    blackSymbols = USE_UNICODE_PIECES and blackSymbols_unicode or blackSymbols_letters
    emptySquareSymbols = USE_UNICODE_PIECES and emptySquareSymbols_unicode or emptySquareSymbols_letters
 
-   if INVERT_PIECE_COLORS and USE_UNICODE_PIECES then
+   if USE_UNICODE_INVERTED_PIECES and USE_UNICODE_PIECES then
       whiteSymbols, blackSymbols = blackSymbols, whiteSymbols
       emptySquareSymbols = { light = emptySquareSymbols.dark, dark = emptySquareSymbols.light }
    end
@@ -1203,15 +1209,15 @@ end
 function cycleDisplayMode()
    if not USE_UNICODE_PIECES then
       USE_UNICODE_PIECES = true
-      INVERT_PIECE_COLORS = false
-   elseif not INVERT_PIECE_COLORS then
-      INVERT_PIECE_COLORS = true
+      USE_UNICODE_INVERTED_PIECES = false
+   elseif not USE_UNICODE_INVERTED_PIECES then
+      USE_UNICODE_INVERTED_PIECES = true
    else
       USE_UNICODE_PIECES = false
-      INVERT_PIECE_COLORS = false
+      USE_UNICODE_INVERTED_PIECES = false
    end
    updateDisplayMode()
-   if USE_UNICODE_PIECES and INVERT_PIECE_COLORS then
+   if USE_UNICODE_PIECES and USE_UNICODE_INVERTED_PIECES then
       return "Unicode (inverted)"
    elseif USE_UNICODE_PIECES then
       return "Unicode"
@@ -1897,7 +1903,6 @@ function displayPosition(pos, lastMove, capturedByUser, capturedByEngine, blackM
 end
 
 -- ui.lua ======= end
-
 
 -- help.lua ======= 1550
 
@@ -3382,9 +3387,10 @@ end
 
 -- challenge.lua ======= end
 
--- main.lua ======= 1550
+-- main.lua ======= 0615
 
 function main()
+   updateDisplayMode()
    local pos = Position.new(initial, 0, {true,true}, {true,true}, 0, 0)
 -- Board this game started from (standard, unless a custom/puzzle position is loaded via 'l' before any moves). Saved with the game code so rebuildHistoryFromMoves() replays from the real start instead of always assuming `initial`.
    local startingBoard = initial
