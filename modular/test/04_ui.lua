@@ -164,6 +164,14 @@ function printboard(board, lastMove, checkers, guards, isMate, hints)
 -- move around inside what used to be row boundaries, so a naive per-line split misreads
 -- the board (dropped/shifted files). Absolute-index lookup stays correct either way.
          local c = board:sub(idx + 1, idx + 1)
+-- Internally the engine always stores "current/user's side" as uppercase
+-- (see Position:rotate()), regardless of that side's real color. For
+-- display we want the real-world convention (White=uppercase, Black=
+-- lowercase), so when PLAYER_IS_BLACK, flip the case of piece letters
+-- just for rendering - the underlying board string itself is untouched.
+         if PLAYER_IS_BLACK and c:match('%a') then
+            c = c:match('%u') and c:lower() or c:upper()
+         end
          local file = i - 1
          local sym
          if c == '.' then
