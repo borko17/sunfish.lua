@@ -51,6 +51,7 @@ function main(playAsBlack)
    if PLAYER_IS_BLACK then
 -- Sunfish (White) opens the game before the player ever sees a move prompt.
       echoW("You are playing Black. 🐠 Sunfish is thinking...")
+      -- Rotate for engine, but store the move in ABSOLUTE coordinates
       local rotated = pos:rotate()
       local enginemove, score, reachedDepth, usedNodes, elapsed = search(rotated, NODES_SEARCHED, gameHistory)
       if PROFILE_PRINT_ENABLED then
@@ -75,7 +76,10 @@ function main(playAsBlack)
             halfmoveClock = halfmoveClock + 1
          end
          if engineCap then table.insert(capturedByEngine, engineCap) end
-         local engineMoveNotation = render(119-enginemove[0 + __1]) .. render(119-enginemove[1 + __1])
+         -- Convert engine move to absolute coordinates for display
+         local absFrom = 119 - enginemove[1]
+         local absTo = 119 - enginemove[2]
+         local engineMoveNotation = render(absFrom) .. render(absTo)
          if enginemove[3] and enginemove[3] ~= '' and enginemove[3] ~= 'Q' then
             engineMoveNotation = engineMoveNotation .. enginemove[3]:lower()
          end
@@ -85,7 +89,8 @@ function main(playAsBlack)
          pos.score = 0
          gameHistory[tpKey(pos)] = true
          positionCounts[tpKey(pos)] = (positionCounts[tpKey(pos)] or 0) + 1
-         lastMove = {119 - enginemove[1], 119 - enginemove[2]}
+         -- Store lastMove in absolute coordinates
+         lastMove = {absFrom, absTo}
          moveSnapshots[0].pos = pos
          moveSnapshots[0].lastMove = lastMove
          moveSnapshots[0].capturedByEngine = {table.unpack(capturedByEngine)}
@@ -336,7 +341,10 @@ assert(score)
                   halfmoveClock = halfmoveClock + 1
                end
                if engineCap then table.insert(capturedByEngine, engineCap) end
-               local engineMoveNotation = render(119-enginemove[0 + __1]) .. render(119-enginemove[1 + __1])
+               -- Convert engine move to absolute coordinates for display
+               local absFrom = 119 - enginemove[1]
+               local absTo = 119 - enginemove[2]
+               local engineMoveNotation = render(absFrom) .. render(absTo)
                if enginemove[3] and enginemove[3] ~= '' and enginemove[3] ~= 'Q' then
                   engineMoveNotation = engineMoveNotation .. enginemove[3]:lower()
                end
@@ -348,7 +356,7 @@ assert(score)
                pos.score = 0
                gameHistory[tpKey(pos)] = true
                positionCounts[tpKey(pos)] = (positionCounts[tpKey(pos)] or 0) + 1
-               lastMove = {119 - enginemove[1], 119 - enginemove[2]}
+               lastMove = {absFrom, absTo}
             else
                echoW("Sunfish has no legal move (checkmate or stalemate).")
             end
@@ -416,6 +424,7 @@ print("Captured: " .. renderCaptured(capturedByUser, ownSymbols))
       echoW("Resuming the game.")
       displayPosition(pos, lastMove, capturedByUser, capturedByEngine, blackMoves)
    else
+      -- Parse user move in absolute coordinates
       usermove = {parse(crdn:sub(1,2)), parse(crdn:sub(3,4))}
       local from = usermove[1]
       if not (from and usermove[2]) then
@@ -580,7 +589,10 @@ assert(score)
       end
       if engineCap then table.insert(capturedByEngine, engineCap) end
 
-      local engineMoveNotation = render(119-enginemove[0 + __1]) .. render(119-enginemove[1 + __1])
+      -- Convert engine move to absolute coordinates for display
+      local absFrom = 119 - enginemove[1]
+      local absTo = 119 - enginemove[2]
+      local engineMoveNotation = render(absFrom) .. render(absTo)
       if enginemove[3] and enginemove[3] ~= '' and enginemove[3] ~= 'Q' then
          engineMoveNotation = engineMoveNotation .. enginemove[3]:lower()
       end
@@ -593,7 +605,7 @@ blackMoves = blackMoves + 1
 pos.score = 0  -- CRITICAL!
 gameHistory[tpKey(pos)] = true
 positionCounts[tpKey(pos)] = (positionCounts[tpKey(pos)] or 0) + 1
-      lastMove = {119 - enginemove[1], 119 - enginemove[2]}
+      lastMove = {absFrom, absTo}
 
       if hasInsufficientMaterial(pos.board) then
          printboard(arrayToBoard(pos.board), lastMove, {}, {})
