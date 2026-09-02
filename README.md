@@ -234,10 +234,6 @@ Letter mode is useful when the terminal font does not provide reliable chess-sym
 
 When enabled, annotations can display additional board information such as last move, check/guard information, and other move-related markers. Toggle during a game with `a`.
 
-## Promotion
-
-When a pawn reaches the last rank, the player can select `Q`, `R`, `B`, or `N`. Underpromotion is therefore supported instead of automatically promoting every pawn to a queen.
-
 ## Screenshots
 
 Letters mode:
