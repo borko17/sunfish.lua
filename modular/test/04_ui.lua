@@ -145,16 +145,16 @@ function printboard(board, lastMove, checkers, guards, isMate, hints)
    end
 
    print(topBorder)
--- Rank rows top-to-bottom, and files within each row left-to-right; reversed when
--- PLAYER_IS_BLACK so the board is shown from Black's side (rank 1 at top, h-file on the left).
+-- Rank rows top-to-bottom, and files within each row left-to-right.
+-- NOTE: the board string passed in here is already physically rotated 180°
+-- when PLAYER_IS_BLACK (see Position:rotate() in main()), so the *reading*
+-- order must stay the same as White's (k=3..10, i=2..9) - only the printed
+-- rank/file labels flip, so the board is shown from Black's side (rank 1 at
+-- top, h-file on the left) without re-reversing the already-rotated string.
    local kFrom, kTo, kStep = 3, 10, 1
    local iFrom, iTo, iStep = 2, 9, 1
-   if PLAYER_IS_BLACK then
-      kFrom, kTo, kStep = 10, 3, -1
-      iFrom, iTo, iStep = 9, 2, -1
-   end
    for k = kFrom, kTo, kStep do
-      local rank = 11 - k
+      local rank = PLAYER_IS_BLACK and (k - 2) or (11 - k)
       local line = {}
       table.insert(line, tostring(rank) .. " " .. sideBorder .. "  ")
       for i = iFrom, iTo, iStep do
