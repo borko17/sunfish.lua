@@ -1,11 +1,11 @@
--- ui.lua ======= 1550
+-- ui.lua ======= 0755
 
 function updateDisplayMode()
    whiteSymbols = USE_UNICODE_PIECES and whiteSymbols_unicode or whiteSymbols_letters
    blackSymbols = USE_UNICODE_PIECES and blackSymbols_unicode or blackSymbols_letters
    emptySquareSymbols = USE_UNICODE_PIECES and emptySquareSymbols_unicode or emptySquareSymbols_letters
 
-   if INVERT_PIECE_COLORS and USE_UNICODE_PIECES then
+   if USE_UNICODE_INVERTED_PIECES and USE_UNICODE_PIECES then
       whiteSymbols, blackSymbols = blackSymbols, whiteSymbols
       emptySquareSymbols = { light = emptySquareSymbols.dark, dark = emptySquareSymbols.light }
    end
@@ -15,15 +15,15 @@ end
 function cycleDisplayMode()
    if not USE_UNICODE_PIECES then
       USE_UNICODE_PIECES = true
-      INVERT_PIECE_COLORS = false
-   elseif not INVERT_PIECE_COLORS then
-      INVERT_PIECE_COLORS = true
+      USE_UNICODE_INVERTED_PIECES = false
+   elseif not USE_UNICODE_INVERTED_PIECES then
+      USE_UNICODE_INVERTED_PIECES = true
    else
       USE_UNICODE_PIECES = false
-      INVERT_PIECE_COLORS = false
+      USE_UNICODE_INVERTED_PIECES = false
    end
    updateDisplayMode()
-   if USE_UNICODE_PIECES and INVERT_PIECE_COLORS then
+   if USE_UNICODE_PIECES and USE_UNICODE_INVERTED_PIECES then
       return "Unicode (inverted)"
    elseif USE_UNICODE_PIECES then
       return "Unicode"
