@@ -1,6 +1,10 @@
 -- ui.lua ======= 0755
 
 function updateDisplayMode()
+   if USE_UNICODE_INVERTED_PIECES then
+      USE_UNICODE_PIECES = true
+   end
+
    whiteSymbols = USE_UNICODE_PIECES and whiteSymbols_unicode or whiteSymbols_letters
    blackSymbols = USE_UNICODE_PIECES and blackSymbols_unicode or blackSymbols_letters
    emptySquareSymbols = USE_UNICODE_PIECES and emptySquareSymbols_unicode or emptySquareSymbols_letters
