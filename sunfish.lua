@@ -6,10 +6,10 @@
 USE_UNICODE_PIECES = false
 SHOW_ANNOTATIONS = true
 
-NODES_SEARCHED = 50000 -- node budget/search; soft limit, checked only between depths
+NODES_SEARCHED = 4000 -- node budget/search; soft limit, checked only between depths
 TABLE_SIZE = NODES_SEARCHED * 25 -- scaled off NODES_SEARCHED so it doesn't thrash; upstream's 1e6 too heavy for Luaj-jse on phone
 
-CHALLENGE_ENGINE_NODES = 50000 -- separate, weaker budget for Sunfish's replies in Challenge mode
+CHALLENGE_ENGINE_NODES = 1000 -- separate, weaker budget for Sunfish's replies in Challenge mode
 CHALLENGE_MIN_PIECES = 10
 CHALLENGE_MAX_PIECES = 20
 CHALLENGE_GEN_ATTEMPTS = 400
@@ -3955,9 +3955,4 @@ end
 -- main.lua ======= end
 
 math.randomseed(os.time())
-local ok, err = pcall(main)
-if not ok then
-   local msg = tostring(err)
-   local firstLine = msg:match("^[^\n]*") or msg
-   binding.exec("echo -e " .. firstLine)
-end
+main()
