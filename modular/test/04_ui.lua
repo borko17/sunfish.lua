@@ -131,7 +131,6 @@ function printboard(board, lastMove, checkers, guards, isMate, hints)
       highlight[lastMove[2]] = true
    end
 
-   local l = strsplit(board, '\n')
    print("")
    local topBorder, sideBorder, bottomBorder
    if USE_UNICODE_PIECES then
@@ -156,13 +155,16 @@ function printboard(board, lastMove, checkers, guards, isMate, hints)
    end
    for k = kFrom, kTo, kStep do
       local rank = 11 - k
-      local v = l[k]
       local line = {}
       table.insert(line, tostring(rank) .. " " .. sideBorder .. "  ")
       for i = iFrom, iTo, iStep do
-         local c = v:sub(i, i)
-         local file = i - 1
          local idx = (k - 1) * 10 + (i - 1)
+-- Read directly from the flat board string at its absolute position (idx+1, 1-indexed),
+-- rather than splitting into lines by '\n' first: after Position:rotate() the '\n' bytes
+-- move around inside what used to be row boundaries, so a naive per-line split misreads
+-- the board (dropped/shifted files). Absolute-index lookup stays correct either way.
+         local c = board:sub(idx + 1, idx + 1)
+         local file = i - 1
          local sym
          if c == '.' then
             if (file + rank) % 2 == 0 then
