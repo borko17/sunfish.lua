@@ -20,11 +20,11 @@ local PARTS = {
 "03_search.lua", 
 "04_ui.lua", 
 "05_help.lua", 
-"mate1.lua", 
-"challenge.lua", 
---"debug.lua", 
---"debug2.lua",
-"main.lua"
+"06_mate1.lua", 
+"07_challenge.lua", 
+"08_main.lua"
+"debug.lua", 
+"debug2.lua",
 }
 
 local MANIFEST_NAME = "manifest.txt" -- fetched alongside the parts below, but it's plain text (not Lua) - kept raw in MANIFEST_CONTENT for checkForUpdate() to read, not load()ed as code
