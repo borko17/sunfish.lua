@@ -1,7 +1,7 @@
 -- CONFIG: Options at the top
 --------------------
 USE_UNICODE_PIECES = false
-USE_UNICODE_INVERTED_PIECES = true
+USE_UNICODE_INVERTED_PIECES = false
 SHOW_ANNOTATIONS = true
 
 NODES_SEARCHED = 4000 -- node budget/search; soft limit, checked only between depths
