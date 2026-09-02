@@ -1,0 +1,11 @@
+-- manifest.txt =======
+
+SCRIPT_VERSION = "2.609011550"
+
+CHANGELOG = {
+
+   "'d' now cycles through three display modes (Letters -> Unicode -> Unicode inverted) instead of a simple toggle, swapping light/dark piece and empty-square symbols for dark-background themes.",
+
+}
+
+-- manifest.txt ======= end
