@@ -433,8 +433,40 @@ function expandSaveRows(compact)
    return rows
 end
 
+-- Position:rotate() is a full 180-degree spin of the board, which maps the
+-- e-file to the d-file and vice versa - so after an ODD number of rotate()
+-- calls, King and Queen end up swapped relative to their true file when the
+-- board is read through the fixed A1+file-10*(rank-1) absolute-position
+-- formula (all other pieces are symmetric across that mapping, so they're
+-- unaffected). saveGame()/loadGame() need the corrected (true FEN) layout
+-- regardless of how many rotations pos.board has been through, so this
+-- swaps K<->Q back onto A1/H1/A8/H8-relative positions e1/d1/e8/d8 whenever
+-- that rotation count is odd.
+--
+-- rotationCount here only needs (PLAYER_IS_BLACK and 1 or 0) + whiteMoves
+-- (the human's own move count): every Sunfish/blackMoves turn applies TWO
+-- rotate()s to the running pos (one throwaway pos:rotate() to prep for
+-- search(), one inside the move() that follows) - an even contribution that
+-- never changes parity, so blackMoves can be ignored. main()'s one-time
+-- initial rotate() for a Black-playing user, plus one rotate() per human
+-- move() call, are what actually flips it.
+function correctKingQueenParity(boardStr120, rotationCount)
+   if rotationCount % 2 == 0 then return boardStr120 end
+   local e1, d1 = A1 + 4, A1 + 3
+   local e8, d8 = A1 + 4 - 70, A1 + 3 - 70
+   local chars = {}
+   for i = 1, #boardStr120 do chars[i] = boardStr120:sub(i, i) end
+   local function swap(a, b)
+      chars[a + __1], chars[b + __1] = chars[b + __1], chars[a + __1]
+   end
+   swap(e1, d1)
+   swap(e8, d8)
+   return table.concat(chars)
+end
+
 function saveGame(pos, lastMove, capturedByUser, capturedByEngine, whiteMoves, blackMoves, halfmoveClock, nextToMove, moveHistory, startingBoard, extra)
-   local boardStr120 = arrayToBoard(pos.board)
+   local rotationCount = (PLAYER_IS_BLACK and 1 or 0) + (whiteMoves or 0)
+   local boardStr120 = correctKingQueenParity(arrayToBoard(pos.board), rotationCount)
    local boardLines = {}
    for rank = 8, 1, -1 do
       local line = {}
@@ -469,6 +501,9 @@ function saveGame(pos, lastMove, capturedByUser, capturedByEngine, whiteMoves, b
    local startSource = startingBoard or initial -- always save the starting position (custom or standard initial)
    local startBoardStr = nil
    if startSource then
+-- startingBoard (from main.lua) is now always kept in the true/physical
+-- FEN-like layout already (see main()'s own correctKingQueenParity() call),
+-- same as `initial` - no additional correction needed here.
       local sbLines = {}
       for rank = 8, 1, -1 do
          local line = {}
@@ -493,6 +528,7 @@ function saveGame(pos, lastMove, capturedByUser, capturedByEngine, whiteMoves, b
                 '|last:' .. lastMoveStr .. '|ucap:' .. userCapStr .. '|ecap:' .. engineCapStr ..
                 '|wm:' .. whiteMoves .. '|bm:' .. blackMoves .. '|hc:' .. (halfmoveClock or 0) ..
                 '|next:' .. nextStr .. '|hist:' .. histStr ..
+                '|side:' .. (PLAYER_IS_BLACK and 'b' or 'w') .. -- which side the human is playing, so loadGame() can restore board orientation without asking
                 (startBoardStr and ('|start:' .. startBoardStr) or '') ..
                 extraStr ..
                 '|board:' .. compactBoardStr
@@ -579,7 +615,28 @@ function loadGame(code)
       local halfmoveClock = tonumber(parts.hc) or 0
       local nextToMove = parts.next or "b"
 
+-- Which side the human was playing when this code was saved (see saveGame()).
+-- Set PLAYER_IS_BLACK from it now, so it's in place for parse() below and
+-- for the rotation-count math right after.
+      local loadedSide = (parts.side == 'b') and 'b' or 'w'
+      PLAYER_IS_BLACK = (loadedSide == 'b')
+
+-- fullBoard is always the true/physical FEN-like layout (saveGame() applies
+-- correctKingQueenParity() before serializing, so K/Q are on their real
+-- files here too). The rest of the game expects pos.board in the "current
+-- rotation state" form matching how many rotate()s the running pos had
+-- undergone at save time - same rotationCount formula as saveGame() (see
+-- correctKingQueenParity()'s note: whiteMoves only, blackMoves is always an
+-- even/no-op contribution). Position:rotate() itself performs the correct
+-- King/Queen file swap together with the position/case flip, so a single
+-- conditional rotate() on the (already-correct) fullBoard is all that's
+-- needed - no separate correctKingQueenParity() call here (applying both
+-- would double-correct and land K/Q on the wrong squares).
+      local rotationCount = (PLAYER_IS_BLACK and 1 or 0) + whiteMoves
       local pos = Position.new(fullBoard, 0, {wc1, wc2}, {bc1, bc2}, ep, 0)
+      if rotationCount % 2 == 1 then
+         pos = pos:rotate()
+      end
 
       local capturedByUser = {}
       if parts.ucap ~= '-' then
@@ -623,7 +680,7 @@ function loadGame(code)
          end
       end
 
-      return pos, lastMove, capturedByUser, capturedByEngine, whiteMoves, blackMoves, halfmoveClock, nextToMove, histStr, startingBoard, parts.mode, parts.hints
+      return pos, lastMove, capturedByUser, capturedByEngine, whiteMoves, blackMoves, halfmoveClock, nextToMove, histStr, startingBoard, parts.mode, parts.hints, loadedSide
 
    else -- simple format (board only, 8x8): resets everything else to initial state
       local boardLines = {}
@@ -685,14 +742,25 @@ function rebuildHistoryFromMoves(histStr, fallbackPos, startBoard)
       gameHistory[tpKey(replayPos)] = true
       positionCounts[tpKey(replayPos)] = 1
 
+-- Notation in histStr (built by main()'s render() calls) is always the true/
+-- physical algebraic move (e.g. "e2e3" really means e2->e3), independent of
+-- PLAYER_IS_BLACK - so decode it with a fixed, absolute parse here rather
+-- than the global parse() (which flips for PLAYER_IS_BLACK and would
+-- misdecode a Black-playing user's saved history).
+      local function parseAbs(c)
+         local p, v = c:sub(1,1), c:sub(2,2)
+         local fil, rank = string.byte(p) - string.byte('a'), tonumber(v) - 1
+         return A1 + fil - 10*rank
+      end
+
       local ply = 0
       for notation in histStr:gmatch('[^,]+') do
          if #notation < 4 or #notation > 5 then
             error("bad notation length: " .. notation)
          end
 
-         local from = parse(notation:sub(1,2))
-         local to = parse(notation:sub(3,4))
+         local from = parseAbs(notation:sub(1,2))
+         local to = parseAbs(notation:sub(3,4))
          if not from or not to then
             error("unparseable move: " .. notation)
          end
