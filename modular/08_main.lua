@@ -1,10 +1,21 @@
 -- main.lua ======= 0615
 
-function main()
+-- playAsBlack: when true (from 'nb'), the human plays Black - board is shown/entered
+-- from Black's side (see PLAYER_IS_BLACK in ui.lua) and Sunfish, playing White, moves first.
+function main(playAsBlack)
    updateDisplayMode()
+   PLAYER_IS_BLACK = playAsBlack or false
    local pos = Position.new(initial, 0, {true,true}, {true,true}, 0, 0)
+   if PLAYER_IS_BLACK then
+      pos = pos:rotate() -- user's (Black) pieces become uppercase/bottom-of-array, matching what the rest of the engine expects of "the user's side"
+   end
 -- Board this game started from (standard, unless a custom/puzzle position is loaded via 'l' before any moves). Saved with the game code so rebuildHistoryFromMoves() replays from the real start instead of always assuming `initial`.
-   local startingBoard = initial
+-- Kept in the true/physical FEN-like layout (matching `initial`'s own
+-- layout and rebuildHistoryFromMoves()'s White-view replay), not the
+-- rotated internal `pos.board` form - correct the King/Queen swap that a
+-- Black-playing user's initial rotate() introduces (see
+-- correctKingQueenParity()'s note in ui.lua).
+   local startingBoard = correctKingQueenParity(arrayToBoard(pos.board), PLAYER_IS_BLACK and 1 or 0)
    local capturedByUser = {}
    local capturedByEngine = {}
    local lastMove = nil
@@ -41,6 +52,61 @@ function main()
    print("• 'h' for help")
    print("• 'q' to quit.")
 
+   if PLAYER_IS_BLACK then
+-- Sunfish (White) opens the game before the player ever sees a move prompt.
+      echoW("You are playing Black.") 
+      echoW("🐠 Sunfish is thinking...")
+      -- Rotate for engine, but store the move in ABSOLUTE coordinates
+      local rotated = pos:rotate()
+      local enginemove, score, reachedDepth, usedNodes, elapsed = search(rotated, NODES_SEARCHED, gameHistory)
+      if PROFILE_PRINT_ENABLED then
+         printProfile(elapsed, reachedDepth, usedNodes)
+      end
+      if enginemove and not isLegalMove(rotated, enginemove) then
+         enginemove = nil
+      end
+      if not enginemove then
+         local legal = legalMovesOf(rotated)
+         if #legal > 0 then
+            table.sort(legal, function(a, b) return rotated:value(a) > rotated:value(b) end)
+            enginemove = legal[1]
+         end
+      end
+      if enginemove then
+         local engineCap = capturedAt(rotated, enginemove)
+         local enginePawnMove = isPawnMove(rotated, enginemove)
+         if engineCap or enginePawnMove then
+            halfmoveClock = 0
+         else
+            halfmoveClock = halfmoveClock + 1
+         end
+         if engineCap then table.insert(capturedByEngine, engineCap) end
+-- render() expects the position expressed the way the user's OWN move
+-- coordinates are (see parse(): it flips fil/rank for PLAYER_IS_BLACK).
+-- enginemove is in `rotated`'s absolute/White-view system, so it needs
+-- the 119-x complement before render() - same complement pos.board keeps
+-- using afterwards, so lastMove/highlight get the identical value.
+         local notFrom = 119 - enginemove[1]
+         local notTo = 119 - enginemove[2]
+         local engineMoveNotation = render(notFrom) .. render(notTo)
+         if enginemove[3] and enginemove[3] ~= '' and enginemove[3] ~= 'Q' then
+            engineMoveNotation = engineMoveNotation .. enginemove[3]:lower()
+         end
+         print("Sunfish 1. move: \n" .. engineMoveNotation .. " (" .. formatSeconds(elapsed) .. "s) - score: " .. score)
+         table.insert(moveHistory, {notation = engineMoveNotation, by = "sunfish"})
+         pos = rotated:move(enginemove)
+         pos.score = 0
+         gameHistory[tpKey(pos)] = true
+         positionCounts[tpKey(pos)] = (positionCounts[tpKey(pos)] or 0) + 1
+         -- lastMove/highlight use the same 119-x coordinates as the notation above
+         lastMove = {notFrom, notTo}
+         moveSnapshots[0].pos = pos
+         moveSnapshots[0].lastMove = lastMove
+         moveSnapshots[0].capturedByEngine = {table.unpack(capturedByEngine)}
+         moveSnapshots[0].moveHistory = {table.unpack(moveHistory)}
+      end
+   end
+
    while true do
       local checkers = findCheckers(pos)
       local guards = findKingGuards(pos, checkers)
@@ -48,7 +114,7 @@ function main()
          echoS("Check!")
       end
       printboard(arrayToBoard(pos.board), lastMove, checkers, guards)
-print("Captured: " .. renderCaptured(capturedByUser, blackSymbols))
+print("Captured: " .. renderCaptured(capturedByUser, ownSymbols))
 
             local usermove = nil
 while true do
@@ -186,10 +252,17 @@ while true do
    print("Paste game code:")
    local code = input()
    if code and code ~= '' then
+      local wasPlayerBlack = PLAYER_IS_BLACK
       local result = {loadGame(code)}
       if result[1] then
          if result[11] == "cg" then
             echoW("Note: this code was saved from Challenge Game (type 'cg' then 'l' there to resume with hints).")
+         end
+-- loadGame() already set PLAYER_IS_BLACK (and rotated pos accordingly) from
+-- the code's saved side, if present; just let the player know if it flipped
+-- board orientation from how this session started.
+         if PLAYER_IS_BLACK ~= wasPlayerBlack then
+            echoW("Loaded game was saved playing " .. (PLAYER_IS_BLACK and "Black" or "White") .. " - switching board orientation.")
          end
          pos = result[1]
          lastMove = result[2]
@@ -207,7 +280,7 @@ while true do
          if result[10] then
             startingBoard = result[10]
          elseif not histStr or histStr == '-' or histStr == '' then
-            startingBoard = arrayToBoard(pos.board)
+            startingBoard = correctKingQueenParity(arrayToBoard(pos.board), (PLAYER_IS_BLACK and 1 or 0) + whiteMoves + blackMoves)
          end
 
 -- Rebuilds gameHistory/positionCounts by replaying the saved move list from the real starting position (not always `initial`), for correct threefold repetition across save/load (falls back to seeding just the loaded position if histStr is missing/unparseable).
@@ -249,7 +322,7 @@ while true do
             if lastMove then
    echoW("Loaded position (after your move):")
    print("Your move: \n" .. render(lastMove[1]) .. render(lastMove[2]))
-   print("Captured: " .. renderCaptured(capturedByUser, blackSymbols))
+   print("Captured: " .. renderCaptured(capturedByUser, ownSymbols))
                local checkersAfterYourMove = findCheckers(pos)
                local guardsAfterYourMove = findKingGuards(pos, checkersAfterYourMove)
                if next(checkersAfterYourMove) then
@@ -284,19 +357,24 @@ assert(score)
                   halfmoveClock = halfmoveClock + 1
                end
                if engineCap then table.insert(capturedByEngine, engineCap) end
-               local engineMoveNotation = render(119-enginemove[0 + __1]) .. render(119-enginemove[1 + __1])
+               -- Same convention as the very first Sunfish move: enginemove
+               -- is in rotated's absolute/White-view system, so both
+               -- render() and lastMove/highlight need the 119-x complement.
+               local notFrom = 119 - enginemove[1]
+               local notTo = 119 - enginemove[2]
+               local engineMoveNotation = render(notFrom) .. render(notTo)
                if enginemove[3] and enginemove[3] ~= '' and enginemove[3] ~= 'Q' then
                   engineMoveNotation = engineMoveNotation .. enginemove[3]:lower()
                end
                print("Sunfish " .. (blackMoves + 1) .. ". move: \n" .. engineMoveNotation .. " (" .. formatSeconds(elapsed) .. "s) - score: " .. score)
-               print("Captured: " .. renderCaptured(capturedByEngine, whiteSymbols))
+               print("Captured: " .. renderCaptured(capturedByEngine, opponentSymbols))
                table.insert(moveHistory, {notation = engineMoveNotation, by = "sunfish"})
                pos = rotated:move(enginemove)
                blackMoves = blackMoves + 1
                pos.score = 0
                gameHistory[tpKey(pos)] = true
                positionCounts[tpKey(pos)] = (positionCounts[tpKey(pos)] or 0) + 1
-               lastMove = {119 - enginemove[1], 119 - enginemove[2]}
+               lastMove = {notFrom, notTo}
             else
                echoW("Sunfish has no legal move (checkmate or stalemate).")
             end
@@ -304,7 +382,7 @@ assert(score)
 
          if lastMove and nextToMove ~= "b" then
             print("Sunfish " .. blackMoves .. ". move: \n" .. render(lastMove[1]) .. render(lastMove[2]))
-            print("Captured: " .. renderCaptured(capturedByEngine, whiteSymbols))
+            print("Captured: " .. renderCaptured(capturedByEngine, opponentSymbols))
          end
 
          local checkers = findCheckers(pos)
@@ -314,7 +392,7 @@ assert(score)
             echoS("Check!")
          end
          printboard(arrayToBoard(pos.board), lastMove, checkers, guards, loadedMate)
-print("Captured: " .. renderCaptured(capturedByUser, blackSymbols))
+print("Captured: " .. renderCaptured(capturedByUser, ownSymbols))
 -- A loaded code can itself be a finished position (mate/stalemate) if saved/edited that way; check before handing control back to the player, or the game would sit waiting for an impossible move.
          if loadedMate then
             echoE("Checkmate!")
@@ -338,6 +416,10 @@ print("Captured: " .. renderCaptured(capturedByUser, blackSymbols))
        print("----")
       echoW("Starting new game...")
       return main()
+   elseif crdn == 'nb' then
+       print("----")
+      echoW("Starting new game (you play Black)...")
+      return main(true)
    elseif crdn == 'h' then
        print("----")
       showHelpGame()
@@ -360,6 +442,7 @@ print("Captured: " .. renderCaptured(capturedByUser, blackSymbols))
       echoW("Resuming the game.")
       displayPosition(pos, lastMove, capturedByUser, capturedByEngine, blackMoves)
    else
+      -- Parse user move in absolute coordinates
       usermove = {parse(crdn:sub(1,2)), parse(crdn:sub(3,4))}
       local from = usermove[1]
       if not (from and usermove[2]) then
@@ -429,9 +512,10 @@ pos.score = 0
 gameHistory[tpKey(pos)] = true
 positionCounts[tpKey(pos)] = (positionCounts[tpKey(pos)] or 0) + 1
 
--- Snapshot for 's<N>'; pos is in Black's rotated view here, so store the White-view rotation to match saveGame()/loadGame().
+-- Snapshot stores the actual current Position. saveGame() normalizes its
+-- orientation from PLAYER_IS_BLACK + the snapshot's real ply history.
       moveSnapshots[whiteMoves] = {
-         pos = pos:rotate(),
+         pos = pos,
          lastMove = {usermove[1], usermove[2]},
          capturedByUser = {table.unpack(capturedByUser)},
          capturedByEngine = {table.unpack(capturedByEngine)},
@@ -524,20 +608,27 @@ assert(score)
       end
       if engineCap then table.insert(capturedByEngine, engineCap) end
 
-      local engineMoveNotation = render(119-enginemove[0 + __1]) .. render(119-enginemove[1 + __1])
+      -- pos here (before this move) is in absolute White-view coordinates
+      -- (each move() rotation cancels out in pairs over a full round), same
+      -- as the very first Sunfish move above - render() needs the 119-x
+      -- complement, and so does lastMove/highlight once pos.board rotates
+      -- back to the user's (Black) view after this move is applied.
+      local notFrom = 119 - enginemove[1]
+      local notTo = 119 - enginemove[2]
+      local engineMoveNotation = render(notFrom) .. render(notTo)
       if enginemove[3] and enginemove[3] ~= '' and enginemove[3] ~= 'Q' then
          engineMoveNotation = engineMoveNotation .. enginemove[3]:lower()
       end
 print("Sunfish ".. (blackMoves + 1) ..". move:")
 print(engineMoveNotation .. " (" .. formatSeconds(elapsed) .. "s) - score: " .. score)
-print("Captured: " .. renderCaptured(capturedByEngine, whiteSymbols))
+print("Captured: " .. renderCaptured(capturedByEngine, opponentSymbols))
 table.insert(moveHistory, {notation = engineMoveNotation, by = "sunfish"})
 pos = pos:move(enginemove)
 blackMoves = blackMoves + 1
 pos.score = 0  -- CRITICAL!
 gameHistory[tpKey(pos)] = true
 positionCounts[tpKey(pos)] = (positionCounts[tpKey(pos)] or 0) + 1
-      lastMove = {119 - enginemove[1], 119 - enginemove[2]}
+      lastMove = {notFrom, notTo}
 
       if hasInsufficientMaterial(pos.board) then
          printboard(arrayToBoard(pos.board), lastMove, {}, {})
