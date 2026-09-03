@@ -1,4 +1,4 @@
--- help.lua ======= 1550
+-- help.lua =======
 
 -- Common help section shared by all three modes (save formats, display modes, symbols, fonts)
 
