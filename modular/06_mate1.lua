@@ -1,6 +1,4 @@
--- mate1.lua ======= 1550
-
--- AI puzzle mode ("m1")
+-- mate1.lua =======
 
 emptyBoard =
     '         \n' ..
