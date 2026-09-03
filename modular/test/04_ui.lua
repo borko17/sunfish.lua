@@ -462,8 +462,17 @@ function correctKingQueenParity(boardStr120, rotationCount)
 end
 
 function saveGame(pos, lastMove, capturedByUser, capturedByEngine, whiteMoves, blackMoves, halfmoveClock, nextToMove, moveHistory, startingBoard, extra)
-   local rotationCount = (PLAYER_IS_BLACK and 1 or 0) + (whiteMoves or 0) + (blackMoves or 0)
-   local boardStr120 = correctKingQueenParity(arrayToBoard(pos.board), rotationCount)
+   -- Position:move() rotates the position after every ply.  Therefore the
+   -- current orientation is determined by the initial side orientation plus
+   -- the number of actual plies, NOT by whiteMoves/blackMoves.  In nb mode
+   -- the opening Sunfish move is not included in the blackMoves counter, so
+   -- using those counters here caused saved boards to be rotated incorrectly.
+   local plyCount = moveHistory and #moveHistory or 0
+   local rotationCount = (PLAYER_IS_BLACK and 1 or 0) + plyCount
+   local boardStr120 = arrayToBoard(pos.board)
+   if rotationCount % 2 == 1 then
+      boardStr120 = arrayToBoard(pos:rotate().board)
+   end
    local boardLines = {}
    for rank = 8, 1, -1 do
       local line = {}
@@ -618,17 +627,17 @@ function loadGame(code)
       local loadedSide = (parts.side == 'b') and 'b' or 'w'
       PLAYER_IS_BLACK = (loadedSide == 'b')
 
--- fullBoard is always the true/physical FEN-like layout (saveGame() applies
--- correctKingQueenParity() before serializing, so K/Q are on their real
--- files here too). The rest of the game expects pos.board in the "current
--- rotation state" form matching how many rotate()s the running pos had
--- undergone at save time - same rotationCount formula as saveGame()
--- (PLAYER_IS_BLACK + whiteMoves + blackMoves). Position:rotate() itself
--- performs the correct King/Queen file swap together with the position/case
--- flip, so a single conditional rotate() on the (already-correct) fullBoard
--- is all that's needed - no separate correctKingQueenParity() call here
--- (applying both would double-correct and land K/Q on the wrong squares).
-      local rotationCount = (PLAYER_IS_BLACK and 1 or 0) + whiteMoves + blackMoves
+-- fullBoard is always the true/physical board layout.  Recreate the
+-- orientation of the saved Position from the number of actual plies.
+-- Do not use whiteMoves + blackMoves here: in nb mode the automatic opening
+-- Sunfish move is part of histStr but is not present in the move counters.
+      local plyCount = 0
+      if parts.hist and parts.hist ~= '-' and parts.hist ~= '' then
+         for _ in parts.hist:gmatch('[^,]+') do
+            plyCount = plyCount + 1
+         end
+      end
+      local rotationCount = (PLAYER_IS_BLACK and 1 or 0) + plyCount
       local pos = Position.new(fullBoard, 0, {wc1, wc2}, {bc1, bc2}, ep, 0)
       if rotationCount % 2 == 1 then
          pos = pos:rotate()
