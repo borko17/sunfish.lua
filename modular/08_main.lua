@@ -1,4 +1,4 @@
--- main.lua ======= 0615
+-- main.lua =======
 
 -- playAsBlack: when true (from 'nb'), the human plays Black - board is shown/entered
 -- from Black's side (see PLAYER_IS_BLACK in ui.lua) and Sunfish, playing White, moves first.
