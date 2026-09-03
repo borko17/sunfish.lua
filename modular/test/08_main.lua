@@ -512,9 +512,10 @@ pos.score = 0
 gameHistory[tpKey(pos)] = true
 positionCounts[tpKey(pos)] = (positionCounts[tpKey(pos)] or 0) + 1
 
--- Snapshot for 's<N>'; pos is in Black's rotated view here, so store the White-view rotation to match saveGame()/loadGame().
+-- Snapshot stores the actual current Position. saveGame() normalizes its
+-- orientation from PLAYER_IS_BLACK + the snapshot's real ply history.
       moveSnapshots[whiteMoves] = {
-         pos = pos:rotate(),
+         pos = pos,
          lastMove = {usermove[1], usermove[2]},
          capturedByUser = {table.unpack(capturedByUser)},
          capturedByEngine = {table.unpack(capturedByEngine)},
