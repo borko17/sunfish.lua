@@ -1,6 +1,6 @@
 -- manifest.txt =======
 
-SCRIPT_VERSION = "2.609011550"
+SCRIPT_VERSION = "2.609032023"
 
 CHANGELOG = {
 
