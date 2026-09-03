@@ -1,4 +1,4 @@
--- ui.lua ======= 0755
+-- ui.lua =======
 
 function updateDisplayMode()
    if USE_UNICODE_INVERTED_PIECES then
