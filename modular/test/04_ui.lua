@@ -443,13 +443,10 @@ end
 -- swaps K<->Q back onto A1/H1/A8/H8-relative positions e1/d1/e8/d8 whenever
 -- that rotation count is odd.
 --
--- rotationCount here only needs (PLAYER_IS_BLACK and 1 or 0) + whiteMoves
--- (the human's own move count): every Sunfish/blackMoves turn applies TWO
--- rotate()s to the running pos (one throwaway pos:rotate() to prep for
--- search(), one inside the move() that follows) - an even contribution that
--- never changes parity, so blackMoves can be ignored. main()'s one-time
--- initial rotate() for a Black-playing user, plus one rotate() per human
--- move() call, are what actually flips it.
+-- rotationCount is (PLAYER_IS_BLACK and 1 or 0) + whiteMoves + blackMoves:
+-- every move() call rotates pos exactly once, no matter whose move it is,
+-- and main()'s one-time initial rotate() for a Black-playing user adds one
+-- more on top - all three terms count toward parity, none can be dropped.
 function correctKingQueenParity(boardStr120, rotationCount)
    if rotationCount % 2 == 0 then return boardStr120 end
    local e1, d1 = A1 + 4, A1 + 3
@@ -465,7 +462,7 @@ function correctKingQueenParity(boardStr120, rotationCount)
 end
 
 function saveGame(pos, lastMove, capturedByUser, capturedByEngine, whiteMoves, blackMoves, halfmoveClock, nextToMove, moveHistory, startingBoard, extra)
-   local rotationCount = (PLAYER_IS_BLACK and 1 or 0) + (whiteMoves or 0)
+   local rotationCount = (PLAYER_IS_BLACK and 1 or 0) + (whiteMoves or 0) + (blackMoves or 0)
    local boardStr120 = correctKingQueenParity(arrayToBoard(pos.board), rotationCount)
    local boardLines = {}
    for rank = 8, 1, -1 do
@@ -625,14 +622,13 @@ function loadGame(code)
 -- correctKingQueenParity() before serializing, so K/Q are on their real
 -- files here too). The rest of the game expects pos.board in the "current
 -- rotation state" form matching how many rotate()s the running pos had
--- undergone at save time - same rotationCount formula as saveGame() (see
--- correctKingQueenParity()'s note: whiteMoves only, blackMoves is always an
--- even/no-op contribution). Position:rotate() itself performs the correct
--- King/Queen file swap together with the position/case flip, so a single
--- conditional rotate() on the (already-correct) fullBoard is all that's
--- needed - no separate correctKingQueenParity() call here (applying both
--- would double-correct and land K/Q on the wrong squares).
-      local rotationCount = (PLAYER_IS_BLACK and 1 or 0) + whiteMoves
+-- undergone at save time - same rotationCount formula as saveGame()
+-- (PLAYER_IS_BLACK + whiteMoves + blackMoves). Position:rotate() itself
+-- performs the correct King/Queen file swap together with the position/case
+-- flip, so a single conditional rotate() on the (already-correct) fullBoard
+-- is all that's needed - no separate correctKingQueenParity() call here
+-- (applying both would double-correct and land K/Q on the wrong squares).
+      local rotationCount = (PLAYER_IS_BLACK and 1 or 0) + whiteMoves + blackMoves
       local pos = Position.new(fullBoard, 0, {wc1, wc2}, {bc1, bc2}, ep, 0)
       if rotationCount % 2 == 1 then
          pos = pos:rotate()
