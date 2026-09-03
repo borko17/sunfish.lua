@@ -1,5 +1,5 @@
 -- config.lua =======
---------------------
+-- ------------------
 USE_UNICODE_PIECES = false
 USE_UNICODE_INVERTED_PIECES = false
 SHOW_ANNOTATIONS = true
@@ -15,5 +15,5 @@ CHALLENGE_HINTS_ENABLED = false -- shows suggested move; toggle with 'th'
 
 MATE_VALUE = 30000 -- exceeds 8*queen+2*(rook+knight+bishop); king value is double this
 MATE_UPPER = 60000 + (10 * 2529) -- search() scores mate near this, not MATE_VALUE - callers must match
---------------------
+-- ------------------
 -- config.lua ======= end
