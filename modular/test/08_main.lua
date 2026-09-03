@@ -10,7 +10,12 @@ function main(playAsBlack)
       pos = pos:rotate() -- user's (Black) pieces become uppercase/bottom-of-array, matching what the rest of the engine expects of "the user's side"
    end
 -- Board this game started from (standard, unless a custom/puzzle position is loaded via 'l' before any moves). Saved with the game code so rebuildHistoryFromMoves() replays from the real start instead of always assuming `initial`.
-   local startingBoard = arrayToBoard(pos.board)
+-- Kept in the true/physical FEN-like layout (matching `initial`'s own
+-- layout and rebuildHistoryFromMoves()'s White-view replay), not the
+-- rotated internal `pos.board` form - correct the King/Queen swap that a
+-- Black-playing user's initial rotate() introduces (see
+-- correctKingQueenParity()'s note in ui.lua).
+   local startingBoard = correctKingQueenParity(arrayToBoard(pos.board), PLAYER_IS_BLACK and 1 or 0)
    local capturedByUser = {}
    local capturedByEngine = {}
    local lastMove = nil
@@ -247,10 +252,17 @@ while true do
    print("Paste game code:")
    local code = input()
    if code and code ~= '' then
+      local wasPlayerBlack = PLAYER_IS_BLACK
       local result = {loadGame(code)}
       if result[1] then
          if result[11] == "cg" then
             echoW("Note: this code was saved from Challenge Game (type 'cg' then 'l' there to resume with hints).")
+         end
+-- loadGame() already set PLAYER_IS_BLACK (and rotated pos accordingly) from
+-- the code's saved side, if present; just let the player know if it flipped
+-- board orientation from how this session started.
+         if PLAYER_IS_BLACK ~= wasPlayerBlack then
+            echoW("Loaded game was saved playing " .. (PLAYER_IS_BLACK and "Black" or "White") .. " - switching board orientation.")
          end
          pos = result[1]
          lastMove = result[2]
@@ -268,7 +280,7 @@ while true do
          if result[10] then
             startingBoard = result[10]
          elseif not histStr or histStr == '-' or histStr == '' then
-            startingBoard = arrayToBoard(pos.board)
+            startingBoard = correctKingQueenParity(arrayToBoard(pos.board), (PLAYER_IS_BLACK and 1 or 0) + whiteMoves)
          end
 
 -- Rebuilds gameHistory/positionCounts by replaying the saved move list from the real starting position (not always `initial`), for correct threefold repetition across save/load (falls back to seeding just the loaded position if histStr is missing/unparseable).
