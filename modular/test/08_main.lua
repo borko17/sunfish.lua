@@ -280,7 +280,7 @@ while true do
          if result[10] then
             startingBoard = result[10]
          elseif not histStr or histStr == '-' or histStr == '' then
-            startingBoard = correctKingQueenParity(arrayToBoard(pos.board), (PLAYER_IS_BLACK and 1 or 0) + whiteMoves)
+            startingBoard = correctKingQueenParity(arrayToBoard(pos.board), (PLAYER_IS_BLACK and 1 or 0) + whiteMoves + blackMoves)
          end
 
 -- Rebuilds gameHistory/positionCounts by replaying the saved move list from the real starting position (not always `initial`), for correct threefold repetition across save/load (falls back to seeding just the loaded position if histStr is missing/unparseable).
