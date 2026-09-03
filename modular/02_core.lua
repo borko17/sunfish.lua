@@ -1,4 +1,4 @@
--- core.lua ======= 1740
+-- core.lua =======
 
 A1, H1, A8, H8 = 91, 98, 21, 28 -- board is a 120-char padded string for cheap off-board checks
 initial =
