@@ -370,4 +370,3 @@ blackSymbols = USE_UNICODE_PIECES and blackSymbols_unicode or blackSymbols_lette
 emptySquareSymbols = USE_UNICODE_PIECES and emptySquareSymbols_unicode or emptySquareSymbols_letters
 
 -- search.lua ======= end
-
