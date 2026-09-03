@@ -13,6 +13,17 @@ function updateDisplayMode()
       whiteSymbols, blackSymbols = blackSymbols, whiteSymbols
       emptySquareSymbols = { light = emptySquareSymbols.dark, dark = emptySquareSymbols.light }
    end
+
+-- "Captured" lists always store the captured piece's letter uppercased regardless of its
+-- real color, so the caption glyph set has to be chosen by who captured, not board case.
+-- ownSymbols renders what the player captured (opponent's set); opponentSymbols renders
+-- what Sunfish captured (player's own set) - swapped from White's-perspective defaults
+-- when PLAYER_IS_BLACK, so captured pieces always show their true color.
+   if PLAYER_IS_BLACK then
+      ownSymbols, opponentSymbols = whiteSymbols, blackSymbols
+   else
+      ownSymbols, opponentSymbols = blackSymbols, whiteSymbols
+   end
 end
 
 -- Cycles: Letters -> Unicode -> Unicode Inverted -> Letters
@@ -38,17 +49,28 @@ end
 
 -- User interface
 
+-- When true, the player is Black and the board is shown/entered from Black's side:
+-- 'a1' as typed/shown means the square physically in the a1 corner of Black's view,
+-- i.e. absolute h8. Set by 'nb' in main(), read by parse()/render()/printboard().
+PLAYER_IS_BLACK = false
+
 function parse(c)
    if not c then return nil end
    local p, v = c:sub(1,1), c:sub(2,2)
    if not (p and v and tonumber(v)) then return nil end
 
    local fil, rank = string.byte(p) - string.byte('a'), tonumber(v) - 1
+   if PLAYER_IS_BLACK then
+      fil, rank = 7 - fil, 7 - rank
+   end
    return A1 + fil - 10*rank
 end
 
 function render(i)
    local rank, fil = math.floor((i - A1) / 10), (i - A1) % 10
+   if PLAYER_IS_BLACK then
+      rank, fil = -7 - rank, 7 - fil -- rank here is already negated (-7..0), so flip within that range
+   end
    return string.char(fil + string.byte('a')) .. tostring(-rank + 1)
 end
 
@@ -109,7 +131,6 @@ function printboard(board, lastMove, checkers, guards, isMate, hints)
       highlight[lastMove[2]] = true
    end
 
-   local l = strsplit(board, '\n')
    print("")
    local topBorder, sideBorder, bottomBorder
    if USE_UNICODE_PIECES then
@@ -124,15 +145,34 @@ function printboard(board, lastMove, checkers, guards, isMate, hints)
    end
 
    print(topBorder)
-   for k = 3, 10 do
-      local rank = 11 - k
-      local v = l[k]
+-- Rank rows top-to-bottom, and files within each row left-to-right.
+-- NOTE: the board string passed in here is already physically rotated 180°
+-- when PLAYER_IS_BLACK (see Position:rotate() in main()), so the *reading*
+-- order must stay the same as White's (k=3..10, i=2..9) - only the printed
+-- rank/file labels flip, so the board is shown from Black's side (rank 1 at
+-- top, h-file on the left) without re-reversing the already-rotated string.
+   local kFrom, kTo, kStep = 3, 10, 1
+   local iFrom, iTo, iStep = 2, 9, 1
+   for k = kFrom, kTo, kStep do
+      local rank = PLAYER_IS_BLACK and (k - 2) or (11 - k)
       local line = {}
       table.insert(line, tostring(rank) .. " " .. sideBorder .. "  ")
-      for i = 2, 9 do
-         local c = v:sub(i, i)
-         local file = i - 1
+      for i = iFrom, iTo, iStep do
          local idx = (k - 1) * 10 + (i - 1)
+-- Read directly from the flat board string at its absolute position (idx+1, 1-indexed),
+-- rather than splitting into lines by '\n' first: after Position:rotate() the '\n' bytes
+-- move around inside what used to be row boundaries, so a naive per-line split misreads
+-- the board (dropped/shifted files). Absolute-index lookup stays correct either way.
+         local c = board:sub(idx + 1, idx + 1)
+-- Internally the engine always stores "current/user's side" as uppercase
+-- (see Position:rotate()), regardless of that side's real color. For
+-- display we want the real-world convention (White=uppercase, Black=
+-- lowercase), so when PLAYER_IS_BLACK, flip the case of piece letters
+-- just for rendering - the underlying board string itself is untouched.
+         if PLAYER_IS_BLACK and c:match('%a') then
+            c = c:match('%u') and c:lower() or c:upper()
+         end
+         local file = i - 1
          local sym
          if c == '.' then
             if (file + rank) % 2 == 0 then
@@ -192,7 +232,11 @@ end
       print(table.concat(line))
    end
    print(bottomBorder)
-   print("     a  b  c  d  e  f  g  h")
+   if PLAYER_IS_BLACK then
+      print("     h  g  f  e  d  c  b  a")
+   else
+      print("     a  b  c  d  e  f  g  h")
+   end
    print("")
 end
 
@@ -389,8 +433,46 @@ function expandSaveRows(compact)
    return rows
 end
 
+-- Position:rotate() is a full 180-degree spin of the board, which maps the
+-- e-file to the d-file and vice versa - so after an ODD number of rotate()
+-- calls, King and Queen end up swapped relative to their true file when the
+-- board is read through the fixed A1+file-10*(rank-1) absolute-position
+-- formula (all other pieces are symmetric across that mapping, so they're
+-- unaffected). saveGame()/loadGame() need the corrected (true FEN) layout
+-- regardless of how many rotations pos.board has been through, so this
+-- swaps K<->Q back onto A1/H1/A8/H8-relative positions e1/d1/e8/d8 whenever
+-- that rotation count is odd.
+--
+-- rotationCount is (PLAYER_IS_BLACK and 1 or 0) + whiteMoves + blackMoves:
+-- every move() call rotates pos exactly once, no matter whose move it is,
+-- and main()'s one-time initial rotate() for a Black-playing user adds one
+-- more on top - all three terms count toward parity, none can be dropped.
+function correctKingQueenParity(boardStr120, rotationCount)
+   if rotationCount % 2 == 0 then return boardStr120 end
+   local e1, d1 = A1 + 4, A1 + 3
+   local e8, d8 = A1 + 4 - 70, A1 + 3 - 70
+   local chars = {}
+   for i = 1, #boardStr120 do chars[i] = boardStr120:sub(i, i) end
+   local function swap(a, b)
+      chars[a + __1], chars[b + __1] = chars[b + __1], chars[a + __1]
+   end
+   swap(e1, d1)
+   swap(e8, d8)
+   return table.concat(chars)
+end
+
 function saveGame(pos, lastMove, capturedByUser, capturedByEngine, whiteMoves, blackMoves, halfmoveClock, nextToMove, moveHistory, startingBoard, extra)
+   -- Position:move() rotates the position after every ply.  Therefore the
+   -- current orientation is determined by the initial side orientation plus
+   -- the number of actual plies, NOT by whiteMoves/blackMoves.  In nb mode
+   -- the opening Sunfish move is not included in the blackMoves counter, so
+   -- using those counters here caused saved boards to be rotated incorrectly.
+   local plyCount = moveHistory and #moveHistory or 0
+   local rotationCount = (PLAYER_IS_BLACK and 1 or 0) + plyCount
    local boardStr120 = arrayToBoard(pos.board)
+   if rotationCount % 2 == 1 then
+      boardStr120 = arrayToBoard(pos:rotate().board)
+   end
    local boardLines = {}
    for rank = 8, 1, -1 do
       local line = {}
@@ -425,6 +507,9 @@ function saveGame(pos, lastMove, capturedByUser, capturedByEngine, whiteMoves, b
    local startSource = startingBoard or initial -- always save the starting position (custom or standard initial)
    local startBoardStr = nil
    if startSource then
+-- startingBoard (from main.lua) is now always kept in the true/physical
+-- FEN-like layout already (see main()'s own correctKingQueenParity() call),
+-- same as `initial` - no additional correction needed here.
       local sbLines = {}
       for rank = 8, 1, -1 do
          local line = {}
@@ -449,6 +534,7 @@ function saveGame(pos, lastMove, capturedByUser, capturedByEngine, whiteMoves, b
                 '|last:' .. lastMoveStr .. '|ucap:' .. userCapStr .. '|ecap:' .. engineCapStr ..
                 '|wm:' .. whiteMoves .. '|bm:' .. blackMoves .. '|hc:' .. (halfmoveClock or 0) ..
                 '|next:' .. nextStr .. '|hist:' .. histStr ..
+                '|side:' .. (PLAYER_IS_BLACK and 'b' or 'w') .. -- which side the human is playing, so loadGame() can restore board orientation without asking
                 (startBoardStr and ('|start:' .. startBoardStr) or '') ..
                 extraStr ..
                 '|board:' .. compactBoardStr
@@ -535,7 +621,27 @@ function loadGame(code)
       local halfmoveClock = tonumber(parts.hc) or 0
       local nextToMove = parts.next or "b"
 
+-- Which side the human was playing when this code was saved (see saveGame()).
+-- Set PLAYER_IS_BLACK from it now, so it's in place for parse() below and
+-- for the rotation-count math right after.
+      local loadedSide = (parts.side == 'b') and 'b' or 'w'
+      PLAYER_IS_BLACK = (loadedSide == 'b')
+
+-- fullBoard is always the true/physical board layout.  Recreate the
+-- orientation of the saved Position from the number of actual plies.
+-- Do not use whiteMoves + blackMoves here: in nb mode the automatic opening
+-- Sunfish move is part of histStr but is not present in the move counters.
+      local plyCount = 0
+      if parts.hist and parts.hist ~= '-' and parts.hist ~= '' then
+         for _ in parts.hist:gmatch('[^,]+') do
+            plyCount = plyCount + 1
+         end
+      end
+      local rotationCount = (PLAYER_IS_BLACK and 1 or 0) + plyCount
       local pos = Position.new(fullBoard, 0, {wc1, wc2}, {bc1, bc2}, ep, 0)
+      if rotationCount % 2 == 1 then
+         pos = pos:rotate()
+      end
 
       local capturedByUser = {}
       if parts.ucap ~= '-' then
@@ -579,7 +685,7 @@ function loadGame(code)
          end
       end
 
-      return pos, lastMove, capturedByUser, capturedByEngine, whiteMoves, blackMoves, halfmoveClock, nextToMove, histStr, startingBoard, parts.mode, parts.hints
+      return pos, lastMove, capturedByUser, capturedByEngine, whiteMoves, blackMoves, halfmoveClock, nextToMove, histStr, startingBoard, parts.mode, parts.hints, loadedSide
 
    else -- simple format (board only, 8x8): resets everything else to initial state
       local boardLines = {}
@@ -641,14 +747,25 @@ function rebuildHistoryFromMoves(histStr, fallbackPos, startBoard)
       gameHistory[tpKey(replayPos)] = true
       positionCounts[tpKey(replayPos)] = 1
 
+-- Notation in histStr (built by main()'s render() calls) is always the true/
+-- physical algebraic move (e.g. "e2e3" really means e2->e3), independent of
+-- PLAYER_IS_BLACK - so decode it with a fixed, absolute parse here rather
+-- than the global parse() (which flips for PLAYER_IS_BLACK and would
+-- misdecode a Black-playing user's saved history).
+      local function parseAbs(c)
+         local p, v = c:sub(1,1), c:sub(2,2)
+         local fil, rank = string.byte(p) - string.byte('a'), tonumber(v) - 1
+         return A1 + fil - 10*rank
+      end
+
       local ply = 0
       for notation in histStr:gmatch('[^,]+') do
          if #notation < 4 or #notation > 5 then
             error("bad notation length: " .. notation)
          end
 
-         local from = parse(notation:sub(1,2))
-         local to = parse(notation:sub(3,4))
+         local from = parseAbs(notation:sub(1,2))
+         local to = parseAbs(notation:sub(3,4))
          if not from or not to then
             error("unparseable move: " .. notation)
          end
@@ -700,7 +817,7 @@ function displayPosition(pos, lastMove, capturedByUser, capturedByEngine, blackM
    if lastMove then
       local moveLabel = blackMoves and (blackMoves .. ". ") or ""
       print("Sunfish " .. moveLabel .. "move: \n" .. render(lastMove[1]) .. render(lastMove[2]))
-      print("Captured: " .. renderCaptured(capturedByEngine, whiteSymbols))
+      print("Captured: " .. renderCaptured(capturedByEngine, opponentSymbols))
    end
    local checkers = findCheckers(pos)
    local guards = findKingGuards(pos, checkers)
@@ -709,7 +826,7 @@ function displayPosition(pos, lastMove, capturedByUser, capturedByEngine, blackM
       echoS("Check!")
    end
    printboard(arrayToBoard(pos.board), lastMove, checkers, guards, isMate)
-   print("Captured: " .. renderCaptured(capturedByUser, blackSymbols))
+   print("Captured: " .. renderCaptured(capturedByUser, ownSymbols))
 end
 
 -- ui.lua ======= end
