@@ -1,4 +1,3 @@
-
 -- config.lua =======
 --------------------
 USE_UNICODE_PIECES = false
