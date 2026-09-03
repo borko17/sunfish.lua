@@ -51,11 +51,11 @@ function main(playAsBlack)
    echoW("=== sunfish.lua ===")
    print("• 'h' for help")
    print("• 'q' to quit.")
-   print("• 'nb' to play Black")
 
    if PLAYER_IS_BLACK then
 -- Sunfish (White) opens the game before the player ever sees a move prompt.
-      echoW("You are playing Black. 🐠 Sunfish is thinking...")
+      echoW("You are playing Black.") 
+      echoW("🐠 Sunfish is thinking...")
       -- Rotate for engine, but store the move in ABSOLUTE coordinates
       local rotated = pos:rotate()
       local enginemove, score, reachedDepth, usedNodes, elapsed = search(rotated, NODES_SEARCHED, gameHistory)
