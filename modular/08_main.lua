@@ -95,6 +95,7 @@ function main(playAsBlack, showHeader)
             engineMoveNotation = engineMoveNotation .. enginemove[3]:lower()
          end
          print("Sunfish 1. move: \n" .. engineMoveNotation .. " (" .. formatSeconds(elapsed) .. "s) - score: " .. score)
+         print("Captured: " .. renderCaptured(capturedByEngine, opponentSymbols))
          table.insert(moveHistory, {notation = engineMoveNotation, by = "sunfish"})
          pos = rotated:move(enginemove)
          pos.score = 0
