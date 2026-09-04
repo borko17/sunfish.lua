@@ -52,13 +52,11 @@ function main(playAsBlack, showHeader)
       echoW("=== sunfish.lua ===")
       print("• 'h' for help")
       print("• 'q' to quit.")
-      print("• 'nb' to play Black")
    end
 
    if PLAYER_IS_BLACK then
 -- Show the initial board first, before announcing that Sunfish is thinking.
       printboard(arrayToBoard(pos.board), lastMove, {}, {})
-      echoW("You are playing Black.")
       echoW("🐠 Sunfish is thinking...")
       -- Rotate for engine, but store the move in ABSOLUTE coordinates
       local rotated = pos:rotate()
@@ -422,7 +420,8 @@ print("Captured: " .. renderCaptured(capturedByUser, ownSymbols))
       return main(false, false)
    elseif crdn == 'nb' then
        print("----")
-      echoW("Starting new game (you play Black)...")
+      echoW("Starting new game...")
+      echoW("You are playing Black.")
       return main(true, false)
    elseif crdn == 'h' then
        print("----")
