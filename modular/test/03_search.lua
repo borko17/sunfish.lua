@@ -348,6 +348,10 @@ emptySquareSymbols_unicode2 = {
    dark = '\xe2\x96\x93',
    light = '\xe2\x96\x91'
 }
+emptySquareSymbols_unicode3 = {
+   dark = ' ',
+   light = ' '
+}
 emptySquareSymbols_letters = {
    dark = ':',
    light = '.'
