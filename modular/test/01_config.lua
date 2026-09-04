@@ -1,6 +1,6 @@
 -- config.lua =======
 -- ------------------
-DISPLAY_MODE_STEP = 0 -- 0-7; see modular/04_ui.lua DISPLAY_MODE_STEPS for what each value means
+DISPLAY_MODE_STEP = 4 -- 0-7; see modular/04_ui.lua DISPLAY_MODE_STEPS for what each value means
 SHOW_ANNOTATIONS = true
 
 NODES_SEARCHED = 4000 -- node budget/search; soft limit, checked only between depths
