@@ -2,7 +2,7 @@
 -- ------------------
 USE_UNICODE_PIECES = false
 USE_UNICODE_INVERTED_PIECES = false
-USE_UNICODE_EMPTY_SET2 = false
+USE_UNICODE_EMPTY_SET = 1
 SHOW_ANNOTATIONS = true
 
 NODES_SEARCHED = 4000 -- node budget/search; soft limit, checked only between depths
