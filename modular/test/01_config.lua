@@ -1,6 +1,15 @@
 -- config.lua =======
 -- ------------------
-DISPLAY_MODE_STEP = 1 -- 1-8; see modular/04_ui.lua DISPLAY_MODE_STEPS for what each value means
+DISPLAY_MODE_STEP = 0 -- 0-7; 
+-- DISPLAY_MODE_STEPS (0-7):
+--   [0] = Letters
+--   [1] = Letters 2
+--   [2] = Unicode
+--   [3] = Unicode (inverted)
+--   [4] = Unicode 2
+--   [5] = Unicode 2 (inverted)
+--   [6] = Unicode 3
+--   [7] = Unicode 3 (inverted)
 SHOW_ANNOTATIONS = true
 
 NODES_SEARCHED = 4000 -- node budget/search; soft limit, checked only between depths
