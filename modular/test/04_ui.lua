@@ -7,8 +7,10 @@ function updateDisplayMode()
 
    whiteSymbols = USE_UNICODE_PIECES and whiteSymbols_unicode or whiteSymbols_letters
    blackSymbols = USE_UNICODE_PIECES and blackSymbols_unicode or blackSymbols_letters
-   if USE_UNICODE_PIECES and USE_UNICODE_EMPTY_SET2 then
+   if USE_UNICODE_PIECES and USE_UNICODE_EMPTY_SET == 2 then
       emptySquareSymbols = emptySquareSymbols_unicode2
+   elseif USE_UNICODE_PIECES and USE_UNICODE_EMPTY_SET == 3 then
+      emptySquareSymbols = emptySquareSymbols_unicode3
    else
       emptySquareSymbols = USE_UNICODE_PIECES and emptySquareSymbols_unicode or emptySquareSymbols_letters
    end
@@ -30,28 +32,37 @@ function updateDisplayMode()
    end
 end
 
--- Cycles: Letters -> Unicode -> Unicode (inverted) -> Unicode 2 -> Unicode 2 (inverted) -> Letters
+-- Cycles: Letters -> Unicode -> Unicode (inverted) -> Unicode 2 -> Unicode 2 (inverted) -> Unicode 3 -> Unicode 3 (inverted) -> Letters
 function cycleDisplayMode()
    if not USE_UNICODE_PIECES then
       USE_UNICODE_PIECES = true
       USE_UNICODE_INVERTED_PIECES = false
-      USE_UNICODE_EMPTY_SET2 = false
-   elseif not USE_UNICODE_INVERTED_PIECES and not USE_UNICODE_EMPTY_SET2 then
+      USE_UNICODE_EMPTY_SET = 1
+   elseif USE_UNICODE_EMPTY_SET == 1 and not USE_UNICODE_INVERTED_PIECES then
       USE_UNICODE_INVERTED_PIECES = true
-   elseif USE_UNICODE_INVERTED_PIECES and not USE_UNICODE_EMPTY_SET2 then
+   elseif USE_UNICODE_EMPTY_SET == 1 and USE_UNICODE_INVERTED_PIECES then
       USE_UNICODE_INVERTED_PIECES = false
-      USE_UNICODE_EMPTY_SET2 = true
-   elseif not USE_UNICODE_INVERTED_PIECES and USE_UNICODE_EMPTY_SET2 then
+      USE_UNICODE_EMPTY_SET = 2
+   elseif USE_UNICODE_EMPTY_SET == 2 and not USE_UNICODE_INVERTED_PIECES then
+      USE_UNICODE_INVERTED_PIECES = true
+   elseif USE_UNICODE_EMPTY_SET == 2 and USE_UNICODE_INVERTED_PIECES then
+      USE_UNICODE_INVERTED_PIECES = false
+      USE_UNICODE_EMPTY_SET = 3
+   elseif USE_UNICODE_EMPTY_SET == 3 and not USE_UNICODE_INVERTED_PIECES then
       USE_UNICODE_INVERTED_PIECES = true
    else
       USE_UNICODE_PIECES = false
       USE_UNICODE_INVERTED_PIECES = false
-      USE_UNICODE_EMPTY_SET2 = false
+      USE_UNICODE_EMPTY_SET = 1
    end
    updateDisplayMode()
-   if USE_UNICODE_PIECES and USE_UNICODE_EMPTY_SET2 and USE_UNICODE_INVERTED_PIECES then
+   if USE_UNICODE_PIECES and USE_UNICODE_EMPTY_SET == 3 and USE_UNICODE_INVERTED_PIECES then
+      return "Unicode 3 (inverted)"
+   elseif USE_UNICODE_PIECES and USE_UNICODE_EMPTY_SET == 3 then
+      return "Unicode 3"
+   elseif USE_UNICODE_PIECES and USE_UNICODE_EMPTY_SET == 2 and USE_UNICODE_INVERTED_PIECES then
       return "Unicode 2 (inverted)"
-   elseif USE_UNICODE_PIECES and USE_UNICODE_EMPTY_SET2 then
+   elseif USE_UNICODE_PIECES and USE_UNICODE_EMPTY_SET == 2 then
       return "Unicode 2"
    elseif USE_UNICODE_PIECES and USE_UNICODE_INVERTED_PIECES then
       return "Unicode (inverted)"
