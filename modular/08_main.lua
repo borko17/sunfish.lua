@@ -2,7 +2,7 @@
 
 -- playAsBlack: when true (from 'nb'), the human plays Black - board is shown/entered
 -- from Black's side (see PLAYER_IS_BLACK in ui.lua) and Sunfish, playing White, moves first.
-function main(playAsBlack)
+function main(playAsBlack, showHeader)
    updateDisplayMode()
    PLAYER_IS_BLACK = playAsBlack or false
    local pos = Position.new(initial, 0, {true,true}, {true,true}, 0, 0)
@@ -47,14 +47,18 @@ function main(playAsBlack)
 -- Single-level undo snapshot: full state captured right BEFORE your most recent move (pre-move, pre-Sunfish-reply). 'z' restores this and clears it (no re-undo / no redo).
    local undoSnapshot = nil
 
-   print("")
-   echoW("=== sunfish.lua ===")
-   print("• 'h' for help")
-   print("• 'q' to quit.")
+   if showHeader ~= false then
+      print("")
+      echoW("=== sunfish.lua ===")
+      print("• 'h' for help")
+      print("• 'q' to quit.")
+      print("• 'nb' to play Black")
+   end
 
    if PLAYER_IS_BLACK then
--- Sunfish (White) opens the game before the player ever sees a move prompt.
-      echoW("You are playing Black.") 
+-- Show the initial board first, before announcing that Sunfish is thinking.
+      printboard(arrayToBoard(pos.board), lastMove, {}, {})
+      echoW("You are playing Black.")
       echoW("🐠 Sunfish is thinking...")
       -- Rotate for engine, but store the move in ABSOLUTE coordinates
       local rotated = pos:rotate()
@@ -415,11 +419,11 @@ print("Captured: " .. renderCaptured(capturedByUser, ownSymbols))
    elseif crdn == 'n' then
        print("----")
       echoW("Starting new game...")
-      return main()
+      return main(false, false)
    elseif crdn == 'nb' then
        print("----")
       echoW("Starting new game (you play Black)...")
-      return main(true)
+      return main(true, false)
    elseif crdn == 'h' then
        print("----")
       showHelpGame()
