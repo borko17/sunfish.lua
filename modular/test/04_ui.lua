@@ -5,14 +5,14 @@
 DISPLAY_MODE_STEP = DISPLAY_MODE_STEP or 0
 
 DISPLAY_MODE_STEPS = {
-   [1] = { unicode = false, inverted = false, emptySet = 1, lettersEmpty2 = false, name = "Letters" },
-   [2] = { unicode = false, inverted = false, emptySet = 1, lettersEmpty2 = true,  name = "Letters 2" },
-   [3] = { unicode = true,  inverted = false, emptySet = 1, lettersEmpty2 = false, name = "Unicode" },
-   [4] = { unicode = true,  inverted = true,  emptySet = 1, lettersEmpty2 = false, name = "Unicode (inverted)" },
-   [5] = { unicode = true,  inverted = false, emptySet = 2, lettersEmpty2 = false, name = "Unicode 2" },
-   [6] = { unicode = true,  inverted = true,  emptySet = 2, lettersEmpty2 = false, name = "Unicode 2 (inverted)" },
-   [7] = { unicode = true,  inverted = false, emptySet = 3, lettersEmpty2 = false, name = "Unicode 3" },
-   [8] = { unicode = true,  inverted = true,  emptySet = 3, lettersEmpty2 = false, name = "Unicode 3 (inverted)" },
+   [0] = { unicode = false, inverted = false, emptySet = 1, lettersEmpty2 = false, name = "Letters" },
+   [1] = { unicode = false, inverted = false, emptySet = 1, lettersEmpty2 = true,  name = "Letters 2" },
+   [2] = { unicode = true,  inverted = false, emptySet = 1, lettersEmpty2 = false, name = "Unicode" },
+   [3] = { unicode = true,  inverted = true,  emptySet = 1, lettersEmpty2 = false, name = "Unicode (inverted)" },
+   [4] = { unicode = true,  inverted = false, emptySet = 2, lettersEmpty2 = false, name = "Unicode 2" },
+   [5] = { unicode = true,  inverted = true,  emptySet = 2, lettersEmpty2 = false, name = "Unicode 2 (inverted)" },
+   [6] = { unicode = true,  inverted = false, emptySet = 3, lettersEmpty2 = false, name = "Unicode 3" },
+   [7] = { unicode = true,  inverted = true,  emptySet = 3, lettersEmpty2 = false, name = "Unicode 3 (inverted)" },
 }
 
 function updateDisplayMode()
