@@ -417,6 +417,7 @@ print("Captured: " .. renderCaptured(capturedByUser, ownSymbols))
    elseif crdn == 'n' then
        print("----")
       echoW("Starting new game...")
+      echoW("You are playing White.")
       return main(false, false)
    elseif crdn == 'nb' then
        print("----")
