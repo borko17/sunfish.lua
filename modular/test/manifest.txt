@@ -1,0 +1,9 @@
+-- manifest.txt =======
+
+SCRIPT_VERSION = "2.609032023"
+
+CHANGELOG = {
+   "Added support for starting a new game as Black with the 'nb' command."
+}
+
+-- manifest.txt ======= end
