@@ -1,15 +1,36 @@
 -- ui.lua =======
 
+-- Cycles: Letters -> Letters 2 -> Unicode -> Unicode (inverted) -> Unicode 2 -> Unicode 2 (inverted) -> Unicode 3 -> Unicode 3 (inverted) -> Letters
+-- DISPLAY_MODE_STEP (0-7) is the single source of truth; everything else is derived from it here.
+DISPLAY_MODE_STEP = DISPLAY_MODE_STEP or 0
+
+DISPLAY_MODE_STEPS = {
+   [0] = { unicode = false, inverted = false, emptySet = 1, lettersEmpty2 = false, name = "Letters" },
+   [1] = { unicode = false, inverted = false, emptySet = 1, lettersEmpty2 = true,  name = "Letters 2" },
+   [2] = { unicode = true,  inverted = false, emptySet = 1, lettersEmpty2 = false, name = "Unicode" },
+   [3] = { unicode = true,  inverted = true,  emptySet = 1, lettersEmpty2 = false, name = "Unicode (inverted)" },
+   [4] = { unicode = true,  inverted = false, emptySet = 2, lettersEmpty2 = false, name = "Unicode 2" },
+   [5] = { unicode = true,  inverted = true,  emptySet = 2, lettersEmpty2 = false, name = "Unicode 2 (inverted)" },
+   [6] = { unicode = true,  inverted = false, emptySet = 3, lettersEmpty2 = false, name = "Unicode 3" },
+   [7] = { unicode = true,  inverted = true,  emptySet = 3, lettersEmpty2 = false, name = "Unicode 3 (inverted)" },
+}
+
 function updateDisplayMode()
-   if USE_UNICODE_INVERTED_PIECES then
-      USE_UNICODE_PIECES = true
+   local s = DISPLAY_MODE_STEPS[DISPLAY_MODE_STEP]
+
+   whiteSymbols = s.unicode and whiteSymbols_unicode or whiteSymbols_letters
+   blackSymbols = s.unicode and blackSymbols_unicode or blackSymbols_letters
+   if s.unicode and s.emptySet == 2 then
+      emptySquareSymbols = emptySquareSymbols_unicode2
+   elseif s.unicode and s.emptySet == 3 then
+      emptySquareSymbols = emptySquareSymbols_unicode3
+   elseif not s.unicode and s.lettersEmpty2 then
+      emptySquareSymbols = emptySquareSymbols_letters2
+   else
+      emptySquareSymbols = s.unicode and emptySquareSymbols_unicode or emptySquareSymbols_letters
    end
 
-   whiteSymbols = USE_UNICODE_PIECES and whiteSymbols_unicode or whiteSymbols_letters
-   blackSymbols = USE_UNICODE_PIECES and blackSymbols_unicode or blackSymbols_letters
-   emptySquareSymbols = USE_UNICODE_PIECES and emptySquareSymbols_unicode or emptySquareSymbols_letters
-
-   if USE_UNICODE_INVERTED_PIECES and USE_UNICODE_PIECES then
+   if s.inverted then
       whiteSymbols, blackSymbols = blackSymbols, whiteSymbols
       emptySquareSymbols = { light = emptySquareSymbols.dark, dark = emptySquareSymbols.light }
    end
@@ -26,25 +47,14 @@ function updateDisplayMode()
    end
 end
 
--- Cycles: Letters -> Unicode -> Unicode Inverted -> Letters
 function cycleDisplayMode()
-   if not USE_UNICODE_PIECES then
-      USE_UNICODE_PIECES = true
-      USE_UNICODE_INVERTED_PIECES = false
-   elseif not USE_UNICODE_INVERTED_PIECES then
-      USE_UNICODE_INVERTED_PIECES = true
-   else
-      USE_UNICODE_PIECES = false
-      USE_UNICODE_INVERTED_PIECES = false
-   end
+   DISPLAY_MODE_STEP = (DISPLAY_MODE_STEP + 1) % 8
    updateDisplayMode()
-   if USE_UNICODE_PIECES and USE_UNICODE_INVERTED_PIECES then
-      return "Unicode (inverted)"
-   elseif USE_UNICODE_PIECES then
-      return "Unicode"
-   else
-      return "Letters"
-   end
+   return DISPLAY_MODE_STEPS[DISPLAY_MODE_STEP].name
+end
+
+function usingUnicodePieces()
+   return DISPLAY_MODE_STEPS[DISPLAY_MODE_STEP].unicode
 end
 
 -- User interface
@@ -133,7 +143,7 @@ function printboard(board, lastMove, checkers, guards, isMate, hints)
 
    print("")
    local topBorder, sideBorder, bottomBorder
-   if USE_UNICODE_PIECES then
+   if usingUnicodePieces() then
       local horiz = '\xe2\x95\x90'  -- ═
       topBorder    = "  \xe2\x95\x94" .. string.rep(horiz, 26) .. "\xe2\x95\x97"  -- ╔ ... ╗
       sideBorder   = '\xe2\x95\x91'                                               -- ║
@@ -180,7 +190,7 @@ function printboard(board, lastMove, checkers, guards, isMate, hints)
             else
                sym = emptySquareSymbols.dark
             end
-         elseif USE_UNICODE_PIECES then
+         elseif usingUnicodePieces() then
             local isWhitePiece = c:match('%u') ~= nil -- uppercase = white piece
             local upperC = c:upper()
             local set = isWhitePiece and whiteSymbols or blackSymbols
