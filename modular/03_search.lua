@@ -344,9 +344,21 @@ emptySquareSymbols_unicode = {
    dark = '\xe2\x80\xa2',
    light = '\xe2\x97\xa6'
 }
+emptySquareSymbols_unicode2 = {
+   dark = ':',
+   light = '.'
+}
+emptySquareSymbols_unicode3 = {
+   dark = ' ',
+   light = ' '
+}
 emptySquareSymbols_letters = {
    dark = ':',
    light = '.'
+}
+emptySquareSymbols_letters2 = {
+   dark = ' ',
+   light = ' '
 }
 
 whiteSymbols_unicode = {
@@ -365,8 +377,9 @@ blackSymbols_letters = {
    K = 'k', Q = 'q', R = 'r', B = 'b', N = 'n', P = 'p',
 }
 
-whiteSymbols = USE_UNICODE_PIECES and whiteSymbols_unicode or whiteSymbols_letters
-blackSymbols = USE_UNICODE_PIECES and blackSymbols_unicode or blackSymbols_letters
-emptySquareSymbols = USE_UNICODE_PIECES and emptySquareSymbols_unicode or emptySquareSymbols_letters
+-- Default to Letters mode (DISPLAY_MODE_STEP 0); updateDisplayMode() overrides these once called.
+whiteSymbols = whiteSymbols_letters
+blackSymbols = blackSymbols_letters
+emptySquareSymbols = emptySquareSymbols_letters
 
 -- search.lua ======= end
