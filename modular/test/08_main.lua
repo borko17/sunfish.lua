@@ -119,6 +119,7 @@ function main(playAsBlack, showHeader)
          echoS("Check!")
       end
       if lastEngineScore then
+         print("")
          if lastEngineScore < 0 then
             echoE("Score: " .. lastEngineScore)
          else
@@ -405,6 +406,7 @@ assert(score)
             echoS("Check!")
          end
          if lastEngineScore then
+            print("")
             if lastEngineScore < 0 then
                echoE("Score: " .. lastEngineScore)
             else
@@ -567,6 +569,7 @@ if next(displayCheckers) and not isMateNow then
    echoS("Check!")
 end
 if lastEngineScore then
+   print("")
    if lastEngineScore < 0 then
       echoE("Score: " .. lastEngineScore)
    else
