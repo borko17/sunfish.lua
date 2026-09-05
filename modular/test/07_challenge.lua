@@ -653,6 +653,13 @@ print("Captured: " .. renderCaptured(capturedByEngine, opponentSymbols))
       if next(displayCheckers) and not isMateNow then
          echoS("Check!")
       end
+      if lastEngineScore then
+         if lastEngineScore < 0 then
+            echoE("Score: " .. lastEngineScore)
+         else
+            echoS("Score: " .. lastEngineScore)
+         end
+      end
       printboard(arrayToBoard(pos:rotate().board), {usermove[1], usermove[2]}, displayCheckers, displayGuards, isMateNow)
 
       if isMateNow then
@@ -722,11 +729,7 @@ print("Captured: " .. renderCaptured(capturedByEngine, opponentSymbols))
          engineMoveNotation = engineMoveNotation .. enginemove[3]:lower()
       end
       table.insert(moveHistory, {notation = engineMoveNotation, by = "sunfish"})
-      if score < 0 then
-         echoE("Score: " .. score)
-      else
-         echoS("Score: " .. score)
-      end
+      lastEngineScore = score
       print("Sunfish ".. (blackMoves + 1) ..". move:")
 print(engineMoveNotation .. " (" .. formatSeconds(elapsed) .. "s)")
 print("Captured: " .. renderCaptured(capturedByEngine, opponentSymbols))
