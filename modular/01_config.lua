@@ -1,8 +1,16 @@
 -- config.lua =======
 -- ------------------
-USE_UNICODE_PIECES = false
-USE_UNICODE_INVERTED_PIECES = false
 SHOW_ANNOTATIONS = true
+DISPLAY_MODE_STEP = 0 -- 0-7; 
+-- DISPLAY_MODE_STEPS (0-7):
+-- [0] = Letters
+-- [1] = Letters 2
+-- [2] = Unicode
+-- [3] = Unicode (inverted)
+-- [4] = Unicode 2
+-- [5] = Unicode 2 (inverted)
+-- [6] = Unicode 3
+-- [7] = Unicode 3 (inverted)
 
 NODES_SEARCHED = 4000 -- node budget/search; soft limit, checked only between depths
 TABLE_SIZE = NODES_SEARCHED * 25 -- scaled off NODES_SEARCHED so it doesn't thrash; upstream's 1e6 too heavy for Luaj-jse on phone
