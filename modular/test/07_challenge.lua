@@ -226,6 +226,7 @@ function playChallengeGame(board, startPos, startLastMove, startCapturedByUser,
       end
       local hints = (hintsOn and not isMateNow) and cachedHints or nil
       if lastEngineScore then
+         print("")
          if lastEngineScore < 0 then
             echoE("Score: " .. lastEngineScore)
          else
@@ -654,6 +655,7 @@ print("Captured: " .. renderCaptured(capturedByEngine, opponentSymbols))
          echoS("Check!")
       end
       if lastEngineScore then
+         print("")
          if lastEngineScore < 0 then
             echoE("Score: " .. lastEngineScore)
          else
