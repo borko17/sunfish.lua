@@ -30,7 +30,6 @@ function search(pos, maxn, history)
 -- displayed score - it's wrapped in withQuietExec() (which only silences
 -- echoW/echoE/echoS via binding.exec, NOT plain print()), so if we printed
 -- here it would leak out mid-move, before printboard() even runs.
-   echoW("[debug] search() wrapper called, maxn=" .. tostring(maxn) .. " SCORE_PEEK_NODES=" .. tostring(SCORE_PEEK_NODES))
    if maxn == SCORE_PEEK_NODES then
       return realSearch(pos, maxn, history)
    end
