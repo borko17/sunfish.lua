@@ -15,6 +15,39 @@ DISPLAY_MODE_STEPS = {
    [7] = { unicode = true,  inverted = true,  emptySet = 3, lettersEmpty2 = false, name = "Unicode 3 (inverted)" },
 }
 
+
+-- Evaluation bar: 1 dash = 100 points, maximum 26 dashes.
+-- The returned score is normalized to the user's perspective:
+-- positive = You, negative = Sunfish.
+function printEvaluation(score)
+   score = tonumber(score) or 0
+
+   -- search() returns the evaluation from Sunfish's perspective.
+   local userScore = -score
+   local absScore = math.abs(userScore)
+   local dashes = math.min(26, math.floor(absScore / 100 + 0.5))
+
+   local label
+   if userScore > 0 then
+      label = string.format("Score: +%d (You)", math.floor(userScore + 0.5))
+   elseif userScore < 0 then
+      label = string.format("Score: %d (Sunfish)", math.floor(userScore - 0.5))
+   else
+      label = "Score: 0 (Equal)"
+   end
+
+   local bar = "●" .. string.rep("-", dashes) .. "►"
+
+   if userScore >= 0 then
+      echoS(label)
+      echoS(bar)
+   else
+      echoE(label)
+      echoE(bar)
+   end
+end
+
+
 function updateDisplayMode()
    local s = DISPLAY_MODE_STEPS[DISPLAY_MODE_STEP]
 
@@ -131,29 +164,6 @@ strsplit = function(a)
    return out
 end
 
-function setEngineScore(score)
-   CURRENT_ENGINE_SCORE = score
-end
-
-function clearEngineScore()
-   CURRENT_ENGINE_SCORE = nil
-end
-
-function printEngineScore()
-   local score = CURRENT_ENGINE_SCORE
-   if score == nil then
-      return
-   end
-
-   if score < 0 then
-      echoS(string.format("➜    Score: +%d (You)", math.abs(score)))
-   elseif score > 0 then
-      echoE(string.format("➜    Score: +%d (Sunfish)", score))
-   else
-      echoW("➜    Score: 0 (equal)")
-   end
-end
-
 function printboard(board, lastMove, checkers, guards, isMate, hints)
    checkers = checkers or {}
    guards = guards or {}
@@ -165,7 +175,6 @@ function printboard(board, lastMove, checkers, guards, isMate, hints)
    end
 
    print("")
-   printEngineScore()
    local topBorder, sideBorder, bottomBorder
    if usingUnicodePieces() then
       local horiz = '\xe2\x95\x90'  -- ═
