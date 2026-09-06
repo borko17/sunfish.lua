@@ -1,9 +1,13 @@
 -- main.lua =======
 
+-- Node budget for the quiet peek-search run right after the player's own move (both normal games and Challenge mode), just to refresh the displayed Score line before Sunfish replies. Kept small since it's a display-only lookup.
+SCORE_PEEK_NODES = 300
+
 -- playAsBlack: when true (from 'nb'), the human plays Black - board is shown/entered
 -- from Black's side (see PLAYER_IS_BLACK in ui.lua) and Sunfish, playing White, moves first.
 function main(playAsBlack, showHeader)
    updateDisplayMode()
+   clearEngineScore()
    PLAYER_IS_BLACK = playAsBlack or false
    local pos = Position.new(initial, 0, {true,true}, {true,true}, 0, 0)
    if PLAYER_IS_BLACK then
@@ -61,6 +65,7 @@ function main(playAsBlack, showHeader)
       -- Rotate for engine, but store the move in ABSOLUTE coordinates
       local rotated = pos:rotate()
       local enginemove, score, reachedDepth, usedNodes, elapsed = search(rotated, NODES_SEARCHED, gameHistory)
+      setEngineScore(score)
       if PROFILE_PRINT_ENABLED then
          printProfile(elapsed, reachedDepth, usedNodes)
       end
@@ -94,7 +99,7 @@ function main(playAsBlack, showHeader)
          if enginemove[3] and enginemove[3] ~= '' and enginemove[3] ~= 'Q' then
             engineMoveNotation = engineMoveNotation .. enginemove[3]:lower()
          end
-         print("Sunfish 1. move: \n" .. engineMoveNotation .. " (" .. formatSeconds(elapsed) .. "s) - score: " .. score)
+         print("Sunfish 1. move: \n" .. engineMoveNotation .. " (" .. formatSeconds(elapsed) .. "s)")
          print("Captured: " .. renderCaptured(capturedByEngine, opponentSymbols))
          table.insert(moveHistory, {notation = engineMoveNotation, by = "sunfish"})
          pos = rotated:move(enginemove)
@@ -338,6 +343,7 @@ while true do
             echoW("🐠 Sunfish is thinking...")
 enginemove, score, reachedDepth, usedNodes, elapsed = search(rotated, NODES_SEARCHED, gameHistory)
 assert(score)
+            setEngineScore(score)
             if PROFILE_PRINT_ENABLED then
                printProfile(elapsed, reachedDepth, usedNodes)
             end
@@ -369,7 +375,7 @@ assert(score)
                if enginemove[3] and enginemove[3] ~= '' and enginemove[3] ~= 'Q' then
                   engineMoveNotation = engineMoveNotation .. enginemove[3]:lower()
                end
-               print("Sunfish " .. (blackMoves + 1) .. ". move: \n" .. engineMoveNotation .. " (" .. formatSeconds(elapsed) .. "s) - score: " .. score)
+               print("Sunfish " .. (blackMoves + 1) .. ". move: \n" .. engineMoveNotation .. " (" .. formatSeconds(elapsed) .. "s)")
                print("Captured: " .. renderCaptured(capturedByEngine, opponentSymbols))
                table.insert(moveHistory, {notation = engineMoveNotation, by = "sunfish"})
                pos = rotated:move(enginemove)
@@ -545,6 +551,13 @@ for idx in pairs(guardsAfterUser) do
    displayGuards[119 - idx] = true
 end
 
+if not isMateNow and engineHasMove then
+   local _, peekScore = withQuietExec(function()
+      return search(pos, SCORE_PEEK_NODES, gameHistory)
+   end)
+   if peekScore then setEngineScore(peekScore) end
+end
+
 -- Print "Check!" only if not mate
 if next(displayCheckers) and not isMateNow then
    echoS("Check!")
@@ -575,6 +588,7 @@ end
       echoW("🐠 Sunfish is thinking...")
 enginemove, score, reachedDepth, usedNodes, elapsed = search(pos, NODES_SEARCHED, gameHistory)
 assert(score)
+      setEngineScore(score)
       if PROFILE_PRINT_ENABLED then
          printProfile(elapsed, reachedDepth, usedNodes)
       end
@@ -625,7 +639,7 @@ assert(score)
          engineMoveNotation = engineMoveNotation .. enginemove[3]:lower()
       end
 print("Sunfish ".. (blackMoves + 1) ..". move:")
-print(engineMoveNotation .. " (" .. formatSeconds(elapsed) .. "s) - score: " .. score)
+print(engineMoveNotation .. " (" .. formatSeconds(elapsed) .. "s)")
 print("Captured: " .. renderCaptured(capturedByEngine, opponentSymbols))
 table.insert(moveHistory, {notation = engineMoveNotation, by = "sunfish"})
 pos = pos:move(enginemove)
