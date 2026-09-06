@@ -1,4 +1,4 @@
--- challenge.lua ======= 1550
+-- challenge.lua =======
 
 function withQuietExec(fn)
    local realExec = binding.exec
@@ -225,14 +225,6 @@ function playChallengeGame(board, startPos, startLastMove, startCapturedByUser,
          cachedHints = buildHintDisplay(mv)
       end
       local hints = (hintsOn and not isMateNow) and cachedHints or nil
-      if lastEngineScore then
-         print("")
-         if lastEngineScore < 0 then
-            echoE("Score: " .. lastEngineScore)
-         else
-            echoS("Score: " .. lastEngineScore)
-         end
-      end
       printboard(arrayToBoard(pos.board), lastMove, checkers, guards, isMateNow, hints)
    end
 
@@ -240,8 +232,6 @@ function playChallengeGame(board, startPos, startLastMove, startCapturedByUser,
 -- Disabled: no game code output when a Challenge Game game ends.
    local function printFinalCode(posForSave)
    end
-
-   local lastEngineScore = nil  -- Sunfish's last search score; shown above the board (echoS if >=0, echoE if <0)
 
    while true do
       local checkers = findCheckers(pos)
@@ -536,9 +526,9 @@ function playChallengeGame(board, startPos, startLastMove, startCapturedByUser,
                            gameHistory[tpKey(pos)] = true
                            positionCounts[tpKey(pos)] = (positionCounts[tpKey(pos)] or 0) + 1
                            lastMove = {119 - enginemove[1], 119 - enginemove[2]}
-                           lastEngineScore = score
                            print("Sunfish ".. (blackMoves + 1) ..". move:")
 print(engineMoveNotation .. " (" .. formatSeconds(elapsed) .. "s)")
+printEvaluation(score)
 print("Captured: " .. renderCaptured(capturedByEngine, opponentSymbols))
                         end
                      end
@@ -654,14 +644,6 @@ print("Captured: " .. renderCaptured(capturedByEngine, opponentSymbols))
       if next(displayCheckers) and not isMateNow then
          echoS("Check!")
       end
-      if lastEngineScore then
-         print("")
-         if lastEngineScore < 0 then
-            echoE("Score: " .. lastEngineScore)
-         else
-            echoS("Score: " .. lastEngineScore)
-         end
-      end
       printboard(arrayToBoard(pos:rotate().board), {usermove[1], usermove[2]}, displayCheckers, displayGuards, isMateNow)
 
       if isMateNow then
@@ -731,9 +713,9 @@ print("Captured: " .. renderCaptured(capturedByEngine, opponentSymbols))
          engineMoveNotation = engineMoveNotation .. enginemove[3]:lower()
       end
       table.insert(moveHistory, {notation = engineMoveNotation, by = "sunfish"})
-      lastEngineScore = score
       print("Sunfish ".. (blackMoves + 1) ..". move:")
 print(engineMoveNotation .. " (" .. formatSeconds(elapsed) .. "s)")
+printEvaluation(score)
 print("Captured: " .. renderCaptured(capturedByEngine, opponentSymbols))
       -- IMPORTANT: Sunfish's move must be applied before computing the next position, history, or board display.
       pos = pos:move(enginemove)
