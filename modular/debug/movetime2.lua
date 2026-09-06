@@ -25,6 +25,15 @@ local realSearch = search
 local betweenSearchesStart = os.clock() -- first call also measures from script load
 
 function search(pos, maxn, history)
+-- Skip profiling (and don't reset the timer) for the quiet SCORE_PEEK_NODES
+-- probe main.lua/challenge.lua run right after your move to refresh the
+-- displayed score - it's wrapped in withQuietExec() (which only silences
+-- echoW/echoE/echoS via binding.exec, NOT plain print()), so if we printed
+-- here it would leak out mid-move, before printboard() even runs.
+   if maxn == SCORE_PEEK_NODES then
+      return realSearch(pos, maxn, history)
+   end
+
 -- Snapshot accumulator values as of RIGHT NOW, before realSearch() resets
 -- them for its own run. Since search.lua's genMoves()/move()/tp_get()/
 -- tp_set() add to these same globals whenever they're called - including
