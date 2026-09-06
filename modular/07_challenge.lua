@@ -195,6 +195,7 @@ function playChallengeGame(board, startPos, startLastMove, startCapturedByUser,
    }
    local hintsOn = CHALLENGE_HINTS_ENABLED
    local cachedHints = nil   -- hints table for the CURRENT position, computed once per move
+   local hintsFreshForPos = false   -- true when cachedHints was already computed for the current `pos` (e.g. right after Sunfish's move), so showBoard() shouldn't recompute it
 -- Single-level undo snapshot: full state captured right BEFORE the player's most recent move (pre-move, pre-Sunfish-reply). 'z' restores this and clears it (no re-undo / no redo).
    local undoSnapshot = nil
 
@@ -219,12 +220,13 @@ function playChallengeGame(board, startPos, startLastMove, startCapturedByUser,
 
 -- Prints the board using cachedHints (computes it if missing/stale). forceRecompute=true only when the position just changed; the 'd' toggle reuses cachedHints since the position hasn't moved.
    local function showBoard(checkers, guards, isMateNow, forceRecompute)
-      if hintsOn and not isMateNow and (forceRecompute or cachedHints == nil) then
+      if hintsOn and not isMateNow and not hintsFreshForPos and (forceRecompute or cachedHints == nil) then
          echoW("💡 Calculating hint...")
          local avoidMove = findMoveTwoPliesAgo()
          local mv = findHintMove(pos, gameHistory, avoidMove, true)
          cachedHints = buildHintDisplay(mv)
       end
+      hintsFreshForPos = false
       local hints = (hintsOn and not isMateNow) and cachedHints or nil
       printboard(arrayToBoard(pos.board), lastMove, checkers, guards, isMateNow, hints)
    end
@@ -722,9 +724,6 @@ print("Captured: " .. renderCaptured(capturedByEngine, opponentSymbols))
          engineMoveNotation = engineMoveNotation .. enginemove[3]:lower()
       end
       table.insert(moveHistory, {notation = engineMoveNotation, by = "sunfish"})
-      print("Sunfish ".. (blackMoves + 1) ..". move:")
-print(engineMoveNotation .. " (" .. formatSeconds(elapsed) .. "s)")
-print("Captured: " .. renderCaptured(capturedByEngine, opponentSymbols))
       -- IMPORTANT: Sunfish's move must be applied before computing the next position, history, or board display.
       pos = pos:move(enginemove)
       pos.score = 0
@@ -733,6 +732,19 @@ print("Captured: " .. renderCaptured(capturedByEngine, opponentSymbols))
       gameHistory[tpKey(pos)] = true
       positionCounts[tpKey(pos)] = (positionCounts[tpKey(pos)] or 0) + 1
       lastMove = {119 - enginemove[1], 119 - enginemove[2]}
+
+-- Hint for the player's upcoming move is computed here (right after Sunfish's own search), so its "Calculating hint..." + depth progress prints before the "Sunfish N. move:" line, and showBoard() at the top of the next loop iteration just reuses cachedHints instead of recomputing.
+      if hintsOn and not (next(findCheckers(pos)) ~= nil and not hasLegalMove(pos)) then
+         echoW("💡 Calculating hint...")
+         local avoidMove = findMoveTwoPliesAgo()
+         local mv = findHintMove(pos, gameHistory, avoidMove, true)
+         cachedHints = buildHintDisplay(mv)
+         hintsFreshForPos = true
+      end
+
+      print("Sunfish ".. (blackMoves) ..". move:")
+print(engineMoveNotation .. " (" .. formatSeconds(elapsed) .. "s)")
+print("Captured: " .. renderCaptured(capturedByEngine, opponentSymbols))
 
       if hasInsufficientMaterial(pos.board) then
          printboard(arrayToBoard(pos.board), lastMove, {}, {})
