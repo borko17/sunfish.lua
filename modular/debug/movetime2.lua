@@ -24,8 +24,6 @@ end
 local realSearch = search
 local betweenSearchesStart = os.clock() -- first call also measures from script load
 
-echoW("[debug] movetime_between.lua loaded, wrapping search()")
-
 function search(pos, maxn, history)
 -- Skip profiling (and don't reset the timer) for the quiet SCORE_PEEK_NODES
 -- probe main.lua/challenge.lua run right after your move to refresh the
