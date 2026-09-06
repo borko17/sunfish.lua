@@ -131,6 +131,29 @@ strsplit = function(a)
    return out
 end
 
+function setEngineScore(score)
+   CURRENT_ENGINE_SCORE = score
+end
+
+function clearEngineScore()
+   CURRENT_ENGINE_SCORE = nil
+end
+
+function printEngineScore()
+   local score = CURRENT_ENGINE_SCORE
+   if score == nil then
+      return
+   end
+
+   if score < 0 then
+      echoS(string.format("➜    Score: +%d (You)", math.abs(score)))
+   elseif score > 0 then
+      echoE(string.format("➜    Score: +%d (Sunfish)", score))
+   else
+      echoW("➜    Score: 0 (equal)")
+   end
+end
+
 function printboard(board, lastMove, checkers, guards, isMate, hints)
    checkers = checkers or {}
    guards = guards or {}
@@ -142,6 +165,7 @@ function printboard(board, lastMove, checkers, guards, isMate, hints)
    end
 
    print("")
+   printEngineScore()
    local topBorder, sideBorder, bottomBorder
    if usingUnicodePieces() then
       local horiz = '\xe2\x95\x90'  -- ═
