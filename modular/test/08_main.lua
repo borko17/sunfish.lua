@@ -548,6 +548,13 @@ for idx in pairs(guardsAfterUser) do
    displayGuards[119 - idx] = true
 end
 
+if not isMateNow and engineHasMove then
+   local _, peekScore = withQuietExec(function()
+      return search(pos, CHALLENGE_SCORE_PEEK_NODES or 300, gameHistory)
+   end)
+   if peekScore then setEngineScore(peekScore) end
+end
+
 -- Print "Check!" only if not mate
 if next(displayCheckers) and not isMateNow then
    echoS("Check!")
