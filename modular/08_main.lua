@@ -1,13 +1,9 @@
 -- main.lua =======
 
--- Node budget for the quiet peek-search run right after the player's own move (both normal games and Challenge mode), just to refresh the displayed Score line before Sunfish replies. Kept small since it's a display-only lookup.
-SCORE_PEEK_NODES = 300
-
 -- playAsBlack: when true (from 'nb'), the human plays Black - board is shown/entered
 -- from Black's side (see PLAYER_IS_BLACK in ui.lua) and Sunfish, playing White, moves first.
 function main(playAsBlack, showHeader)
    updateDisplayMode()
-   clearEngineScore()
    PLAYER_IS_BLACK = playAsBlack or false
    local pos = Position.new(initial, 0, {true,true}, {true,true}, 0, 0)
    if PLAYER_IS_BLACK then
@@ -26,6 +22,7 @@ function main(playAsBlack, showHeader)
    local whiteMoves = 0
    local blackMoves = 0
    local halfmoveClock = 0  -- resets on capture or pawn move; draw at 100 (50 full moves)
+   local lastEngineScore = nil  -- Sunfish's last search score; shown above the board (echoS if >=0, echoE if <0)
 -- Position hashes seen this game; lets search() score repeats as a draw. Seeded with the starting position.
    local gameHistory = { [tpKey(pos)] = true }
 -- Same keys as gameHistory but counts occurrences, to detect actual threefold repetition and end the game.
@@ -65,7 +62,6 @@ function main(playAsBlack, showHeader)
       -- Rotate for engine, but store the move in ABSOLUTE coordinates
       local rotated = pos:rotate()
       local enginemove, score, reachedDepth, usedNodes, elapsed = search(rotated, NODES_SEARCHED, gameHistory)
-      setEngineScore(score)
       if PROFILE_PRINT_ENABLED then
          printProfile(elapsed, reachedDepth, usedNodes)
       end
@@ -101,6 +97,7 @@ function main(playAsBlack, showHeader)
          end
          print("Sunfish 1. move: \n" .. engineMoveNotation .. " (" .. formatSeconds(elapsed) .. "s)")
          print("Captured: " .. renderCaptured(capturedByEngine, opponentSymbols))
+         lastEngineScore = score
          table.insert(moveHistory, {notation = engineMoveNotation, by = "sunfish"})
          pos = rotated:move(enginemove)
          pos.score = 0
@@ -120,6 +117,14 @@ function main(playAsBlack, showHeader)
       local guards = findKingGuards(pos, checkers)
       if next(checkers) then
          echoS("Check!")
+      end
+      if lastEngineScore then
+         print("")
+         if lastEngineScore < 0 then
+            echoE("Score: " .. lastEngineScore)
+         else
+            echoS("Score: " .. lastEngineScore)
+         end
       end
       printboard(arrayToBoard(pos.board), lastMove, checkers, guards)
 print("Captured: " .. renderCaptured(capturedByUser, ownSymbols))
@@ -343,7 +348,6 @@ while true do
             echoW("🐠 Sunfish is thinking...")
 enginemove, score, reachedDepth, usedNodes, elapsed = search(rotated, NODES_SEARCHED, gameHistory)
 assert(score)
-            setEngineScore(score)
             if PROFILE_PRINT_ENABLED then
                printProfile(elapsed, reachedDepth, usedNodes)
             end
@@ -377,6 +381,7 @@ assert(score)
                end
                print("Sunfish " .. (blackMoves + 1) .. ". move: \n" .. engineMoveNotation .. " (" .. formatSeconds(elapsed) .. "s)")
                print("Captured: " .. renderCaptured(capturedByEngine, opponentSymbols))
+               lastEngineScore = score
                table.insert(moveHistory, {notation = engineMoveNotation, by = "sunfish"})
                pos = rotated:move(enginemove)
                blackMoves = blackMoves + 1
@@ -399,6 +404,14 @@ assert(score)
          local loadedMate = next(checkers) ~= nil and not hasLegalMove(pos)
          if next(checkers) then
             echoS("Check!")
+         end
+         if lastEngineScore then
+            print("")
+            if lastEngineScore < 0 then
+               echoE("Score: " .. lastEngineScore)
+            else
+               echoS("Score: " .. lastEngineScore)
+            end
          end
          printboard(arrayToBoard(pos.board), lastMove, checkers, guards, loadedMate)
 print("Captured: " .. renderCaptured(capturedByUser, ownSymbols))
@@ -551,16 +564,17 @@ for idx in pairs(guardsAfterUser) do
    displayGuards[119 - idx] = true
 end
 
-if not isMateNow and engineHasMove then
-   local _, peekScore = withQuietExec(function()
-      return search(pos, SCORE_PEEK_NODES, gameHistory)
-   end)
-   if peekScore then setEngineScore(peekScore) end
-end
-
 -- Print "Check!" only if not mate
 if next(displayCheckers) and not isMateNow then
    echoS("Check!")
+end
+if lastEngineScore then
+   print("")
+   if lastEngineScore < 0 then
+      echoE("Score: " .. lastEngineScore)
+   else
+      echoS("Score: " .. lastEngineScore)
+   end
 end
 printboard(arrayToBoard(pos:rotate().board), {usermove[1], usermove[2]}, displayCheckers, displayGuards, isMateNow)
 
@@ -588,7 +602,6 @@ end
       echoW("🐠 Sunfish is thinking...")
 enginemove, score, reachedDepth, usedNodes, elapsed = search(pos, NODES_SEARCHED, gameHistory)
 assert(score)
-      setEngineScore(score)
       if PROFILE_PRINT_ENABLED then
          printProfile(elapsed, reachedDepth, usedNodes)
       end
@@ -638,6 +651,7 @@ assert(score)
       if enginemove[3] and enginemove[3] ~= '' and enginemove[3] ~= 'Q' then
          engineMoveNotation = engineMoveNotation .. enginemove[3]:lower()
       end
+lastEngineScore = score
 print("Sunfish ".. (blackMoves + 1) ..". move:")
 print(engineMoveNotation .. " (" .. formatSeconds(elapsed) .. "s)")
 print("Captured: " .. renderCaptured(capturedByEngine, opponentSymbols))
