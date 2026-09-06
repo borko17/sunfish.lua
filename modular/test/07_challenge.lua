@@ -13,7 +13,7 @@ end
 HINT_NODES_BEST = nil       -- nil = reuse NODES_SEARCHED
 
 -- Node budget for the quiet peek-search run right after the player's own move, just to refresh the displayed Score line before Sunfish replies. Kept small since it's a display-only lookup.
-CHALLENGE_SCORE_PEEK_NODES = 300
+CHALLENGE_SCORE_PEEK_NODES = 900
 
 function movesEqual(a, b)
    return a and b and a[1] == b[1] and a[2] == b[2] and a[3] == b[3]
