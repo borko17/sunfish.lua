@@ -1,5 +1,8 @@
 -- main.lua =======
 
+-- Node budget for the quiet peek-search run right after the player's own move (both normal games and Challenge mode), just to refresh the displayed Score line before Sunfish replies. Kept small since it's a display-only lookup.
+SCORE_PEEK_NODES = 300
+
 -- playAsBlack: when true (from 'nb'), the human plays Black - board is shown/entered
 -- from Black's side (see PLAYER_IS_BLACK in ui.lua) and Sunfish, playing White, moves first.
 function main(playAsBlack, showHeader)
@@ -550,7 +553,7 @@ end
 
 if not isMateNow and engineHasMove then
    local _, peekScore = withQuietExec(function()
-      return search(pos, CHALLENGE_SCORE_PEEK_NODES or 300, gameHistory)
+      return search(pos, SCORE_PEEK_NODES, gameHistory)
    end)
    if peekScore then setEngineScore(peekScore) end
 end
