@@ -1,4 +1,4 @@
--- challenge.lua ======= 1550
+-- challenge.lua =======
 
 function withQuietExec(fn)
    local realExec = binding.exec
@@ -167,6 +167,7 @@ end
 function playChallengeGame(board, startPos, startLastMove, startCapturedByUser,
                                   startCapturedByEngine, startWhiteMoves, startHalfmoveClock,
                                   startGameHistory, startPositionCounts, startMoveHistory, startBlackMoves)
+   clearEngineScore()
    local pos = startPos or Position.new(board, 0, {false,false}, {false,false}, 0, 0)
    local currentStartBoard = board -- starting position used for saves/replay; updated on 'l' load to the loaded code's own start
    local capturedByUser = startCapturedByUser or {}
@@ -493,6 +494,7 @@ function playChallengeGame(board, startPos, startLastMove, startCapturedByUser,
                         echoW("🐠 Sunfish is thinking...")
                         local enginemove, score, reachedDepth, usedNodes, elapsed = search(rotated, CHALLENGE_ENGINE_NODES, gameHistory)
                         assert(score)
+                        setEngineScore(score)
 
                         if enginemove and not isLegalMove(rotated, enginemove) then
                            enginemove = nil
@@ -527,7 +529,7 @@ function playChallengeGame(board, startPos, startLastMove, startCapturedByUser,
                            positionCounts[tpKey(pos)] = (positionCounts[tpKey(pos)] or 0) + 1
                            lastMove = {119 - enginemove[1], 119 - enginemove[2]}
                            print("Sunfish ".. (blackMoves + 1) ..". move:")
-print(engineMoveNotation .. " (" .. formatSeconds(elapsed) .. "s) - score: " .. score)
+print(engineMoveNotation .. " (" .. formatSeconds(elapsed) .. "s)")
 print("Captured: " .. renderCaptured(capturedByEngine, opponentSymbols))
                         end
                      end
@@ -640,6 +642,13 @@ print("Captured: " .. renderCaptured(capturedByEngine, opponentSymbols))
          displayGuards[119 - idx] = true
       end
 
+      if not isMateNow and engineHasMove then
+         local _, peekScore = withQuietExec(function()
+            return search(pos, SCORE_PEEK_NODES, gameHistory)
+         end)
+         if peekScore then setEngineScore(peekScore) end
+      end
+
       if next(displayCheckers) and not isMateNow then
          echoS("Check!")
       end
@@ -675,6 +684,7 @@ print("Captured: " .. renderCaptured(capturedByEngine, opponentSymbols))
       echoW("🐠 Sunfish is thinking...")
       local enginemove, score, reachedDepth, usedNodes, elapsed = search(pos, CHALLENGE_ENGINE_NODES, gameHistory)
       assert(score)
+      setEngineScore(score)
 
       if enginemove and not isLegalMove(pos, enginemove) then
          enginemove = nil
@@ -713,7 +723,7 @@ print("Captured: " .. renderCaptured(capturedByEngine, opponentSymbols))
       end
       table.insert(moveHistory, {notation = engineMoveNotation, by = "sunfish"})
       print("Sunfish ".. (blackMoves + 1) ..". move:")
-print(engineMoveNotation .. " (" .. formatSeconds(elapsed) .. "s) - score: " .. score)
+print(engineMoveNotation .. " (" .. formatSeconds(elapsed) .. "s)")
 print("Captured: " .. renderCaptured(capturedByEngine, opponentSymbols))
       -- IMPORTANT: Sunfish's move must be applied before computing the next position, history, or board display.
       pos = pos:move(enginemove)
