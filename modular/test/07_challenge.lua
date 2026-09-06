@@ -12,9 +12,6 @@ end
 -- Best move for the side to move in `pos` (player/White in challenge mode), shown as an on-board hint; same node budget as Sunfish's own move. search() only treats a position as a repetition draw at deeper plies, never for the root move, so it can keep suggesting a back-and-forth into a seen position - if the top suggestion would revisit `history`, fall back to the best legal alternative that doesn't. avoidMove (player's own move from two of their own plies ago, e.g. an undone d4d3) is also excluded when a non-repeating alternative exists, to stop the hint nudging a stalling shuffle.
 HINT_NODES_BEST = nil       -- nil = reuse NODES_SEARCHED
 
--- Node budget for the quiet peek-search run right after the player's own move, just to refresh the displayed Score line before Sunfish replies. Kept small since it's a display-only lookup.
-CHALLENGE_SCORE_PEEK_NODES = 900
-
 function movesEqual(a, b)
    return a and b and a[1] == b[1] and a[2] == b[2] and a[3] == b[3]
 end
@@ -647,7 +644,7 @@ print("Captured: " .. renderCaptured(capturedByEngine, opponentSymbols))
 
       if not isMateNow and engineHasMove then
          local _, peekScore = withQuietExec(function()
-            return search(pos, CHALLENGE_SCORE_PEEK_NODES, gameHistory)
+            return search(pos, SCORE_PEEK_NODES, gameHistory)
          end)
          if peekScore then setEngineScore(peekScore) end
       end
