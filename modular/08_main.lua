@@ -22,7 +22,6 @@ function main(playAsBlack, showHeader)
    local whiteMoves = 0
    local blackMoves = 0
    local halfmoveClock = 0  -- resets on capture or pawn move; draw at 100 (50 full moves)
-   local lastEngineScore = nil  -- Sunfish's last search score; shown above the board (echoS if >=0, echoE if <0)
 -- Position hashes seen this game; lets search() score repeats as a draw. Seeded with the starting position.
    local gameHistory = { [tpKey(pos)] = true }
 -- Same keys as gameHistory but counts occurrences, to detect actual threefold repetition and end the game.
@@ -96,8 +95,8 @@ function main(playAsBlack, showHeader)
             engineMoveNotation = engineMoveNotation .. enginemove[3]:lower()
          end
          print("Sunfish 1. move: \n" .. engineMoveNotation .. " (" .. formatSeconds(elapsed) .. "s)")
+          printEvaluation(score)
          print("Captured: " .. renderCaptured(capturedByEngine, opponentSymbols))
-         lastEngineScore = score
          table.insert(moveHistory, {notation = engineMoveNotation, by = "sunfish"})
          pos = rotated:move(enginemove)
          pos.score = 0
@@ -117,14 +116,6 @@ function main(playAsBlack, showHeader)
       local guards = findKingGuards(pos, checkers)
       if next(checkers) then
          echoS("Check!")
-      end
-      if lastEngineScore then
-         print("")
-         if lastEngineScore < 0 then
-            echoE("Score: " .. lastEngineScore)
-         else
-            echoS("Score: " .. lastEngineScore)
-         end
       end
       printboard(arrayToBoard(pos.board), lastMove, checkers, guards)
 print("Captured: " .. renderCaptured(capturedByUser, ownSymbols))
@@ -380,8 +371,8 @@ assert(score)
                   engineMoveNotation = engineMoveNotation .. enginemove[3]:lower()
                end
                print("Sunfish " .. (blackMoves + 1) .. ". move: \n" .. engineMoveNotation .. " (" .. formatSeconds(elapsed) .. "s)")
+                printEvaluation(score)
                print("Captured: " .. renderCaptured(capturedByEngine, opponentSymbols))
-               lastEngineScore = score
                table.insert(moveHistory, {notation = engineMoveNotation, by = "sunfish"})
                pos = rotated:move(enginemove)
                blackMoves = blackMoves + 1
@@ -404,14 +395,6 @@ assert(score)
          local loadedMate = next(checkers) ~= nil and not hasLegalMove(pos)
          if next(checkers) then
             echoS("Check!")
-         end
-         if lastEngineScore then
-            print("")
-            if lastEngineScore < 0 then
-               echoE("Score: " .. lastEngineScore)
-            else
-               echoS("Score: " .. lastEngineScore)
-            end
          end
          printboard(arrayToBoard(pos.board), lastMove, checkers, guards, loadedMate)
 print("Captured: " .. renderCaptured(capturedByUser, ownSymbols))
@@ -568,14 +551,6 @@ end
 if next(displayCheckers) and not isMateNow then
    echoS("Check!")
 end
-if lastEngineScore then
-   print("")
-   if lastEngineScore < 0 then
-      echoE("Score: " .. lastEngineScore)
-   else
-      echoS("Score: " .. lastEngineScore)
-   end
-end
 printboard(arrayToBoard(pos:rotate().board), {usermove[1], usermove[2]}, displayCheckers, displayGuards, isMateNow)
 
 if isMateNow then
@@ -651,9 +626,9 @@ assert(score)
       if enginemove[3] and enginemove[3] ~= '' and enginemove[3] ~= 'Q' then
          engineMoveNotation = engineMoveNotation .. enginemove[3]:lower()
       end
-lastEngineScore = score
 print("Sunfish ".. (blackMoves + 1) ..". move:")
 print(engineMoveNotation .. " (" .. formatSeconds(elapsed) .. "s)")
+printEvaluation(score)
 print("Captured: " .. renderCaptured(capturedByEngine, opponentSymbols))
 table.insert(moveHistory, {notation = engineMoveNotation, by = "sunfish"})
 pos = pos:move(enginemove)
