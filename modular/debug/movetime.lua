@@ -43,7 +43,7 @@ end
 -- after their own search() calls, and by Part 2 below.
 -------------------------------------------------------------------------------
 
-function printProfile(elapsedArg, depthArg, nodesArg)
+function printProfile(elapsedArg, depthArg, nodesArg, inputTimeArg)
    if not elapsedArg then
       return
    end
@@ -54,8 +54,9 @@ function printProfile(elapsedArg, depthArg, nodesArg)
    local moveCalls = PROFILE_move_calls or 0
    local tpTime = PROFILE_tp_time or 0
    local tpCalls = PROFILE_tp_calls or 0
+   local inputTime = inputTimeArg or 0
 
-   local other = elapsedArg - genMovesTime - moveTime - tpTime
+   local other = elapsedArg - genMovesTime - moveTime - tpTime - inputTime
    if other < 0 then
       other = 0
    end
@@ -65,12 +66,14 @@ function printProfile(elapsedArg, depthArg, nodesArg)
    tpTime = round2(tpTime)
    other = round2(other)
    elapsedArg = round2(elapsedArg)
+   inputTime = round2(inputTime)
 
    print(string.format(
-      "[profile] \ngenMoves: %.2fs/%d \nmove: %.2fs/%d \ntp: %.2fs/%d \nother: %.2fs \ntotal: %.2fs \ndepth: %s \nnodes: %s",
+      "[profile] \ngenMoves: %.2fs/%d \nmove: %.2fs/%d \ntp: %.2fs/%d \ninput (waiting on you): %.2fs \nother (pure processing): %.2fs \ntotal: %.2fs \ndepth: %s \nnodes: %s",
       genMovesTime, genMovesCalls,
       moveTime, moveCalls,
       tpTime, tpCalls,
+      inputTime,
       other,
       elapsedArg,
       tostring(depthArg or "?"),
@@ -128,13 +131,32 @@ function printboard(...)
    return table.unpack(result)
 end
 
+-- Tracks time spent inside input() (waiting on you to type) so Part 2 can
+-- subtract it from "other" and isolate pure processing time. input() is
+-- provided by the host (Yantra/Java binding), not defined in this codebase,
+-- so wrapping it is the only way to measure it without touching main.lua.
+STEP_input_time = 0
+STEP_input_calls = 0
+
+local realInput = input
+if realInput then
+   function input(...)
+      local t0 = os.clock()
+      local result = {realInput(...)}
+      STEP_input_time = STEP_input_time + (os.clock() - t0)
+      STEP_input_calls = STEP_input_calls + 1
+      return table.unpack(result)
+   end
+end
+
 local function printStepProfile()
    print(string.format(
-      "[steps] \nPosition:move: %.2fs/%d \nfindCheckers: %.2fs/%d \nhasLegalMove: %.2fs/%d \nprintboard: %.2fs/%d",
+      "[steps] \nPosition:move: %.2fs/%d \nfindCheckers: %.2fs/%d \nhasLegalMove: %.2fs/%d \nprintboard: %.2fs/%d \ninput (waiting on you): %.2fs/%d",
       round2(STEP_move_time), STEP_move_calls,
       round2(STEP_findCheckers_time), STEP_findCheckers_calls,
       round2(STEP_hasLegalMove_time), STEP_hasLegalMove_calls,
-      round2(STEP_printboard_time), STEP_printboard_calls
+      round2(STEP_printboard_time), STEP_printboard_calls,
+      round2(STEP_input_time), STEP_input_calls
    ))
    STEP_move_time = 0
    STEP_move_calls = 0
@@ -144,6 +166,10 @@ local function printStepProfile()
    STEP_hasLegalMove_calls = 0
    STEP_printboard_time = 0
    STEP_printboard_calls = 0
+   local inputTime = STEP_input_time
+   STEP_input_time = 0
+   STEP_input_calls = 0
+   return inputTime
 end
 
 -------------------------------------------------------------------------------
@@ -163,9 +189,9 @@ function search(pos, maxn, history)
 
    local elapsed = os.clock() - betweenSearchesStart
    if PROFILE_PRINT_ENABLED then
-      printStepProfile()
+      local inputTime = printStepProfile()
       echoW("[profile] your move -> Sunfish thinking:")
-      printProfile(elapsed, "-", "-")
+      printProfile(elapsed, "-", "-", inputTime)
    end
 
    local result = {realSearch(pos, maxn, history)}
