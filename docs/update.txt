@@ -1,11 +1,13 @@
 -- manifest.txt =======
 
-SCRIPT_VERSION = "2.609062100"
+SCRIPT_VERSION = "2.609071200"
 
 CHANGELOG = {
    "Added support for starting a new game as Black with the 'nb' command.",
    "'d' now cycles through eight display modes, instead of three.",
    "Moved score display to the top of the board with color-coded player/Sunfish advantage.",
+   "Removed score from Sunfish move output.",
+   "Fixed nb mode move numbering: Sunfish's 2nd move showed as '1. move'",
 }
 
 -- manifest.txt ======= end
