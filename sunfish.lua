@@ -27,7 +27,7 @@ CHALLENGE_HINTS_ENABLED = false -- shows suggested move; toggle with 'th'
 MATE_VALUE = 30000 -- exceeds 8*queen+2*(rook+knight+bishop); king value is double this
 MATE_UPPER = 60000 + (10 * 2529) -- search() scores mate near this, not MATE_VALUE - callers must match
 -- ------------------
--- config.lua ======= end
+-- manifest.txt =======
 
 SCRIPT_VERSION = "2.609062100"
 
@@ -36,6 +36,8 @@ CHANGELOG = {
    "'d' now cycles through eight display modes, instead of three.",
    "Moved score display to the top of the board with color-coded player/Sunfish advantage.",
 }
+
+-- manifest.txt ======= end
 
 local GITHUB_RAW_URL = "https://raw.githubusercontent.com/borko17/sunfish.lua/main/docs/update.txt"
 
