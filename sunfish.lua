@@ -31,12 +31,14 @@ MATE_UPPER = 60000 + (10 * 2529) -- search() scores mate near this, not MATE_VAL
 
 -- manifest.txt =======
 
-SCRIPT_VERSION = "2.609062100"
+SCRIPT_VERSION = "2.609071200"
 
 CHANGELOG = {
    "Added support for starting a new game as Black with the 'nb' command.",
    "'d' now cycles through eight display modes, instead of three.",
    "Moved score display to the top of the board with color-coded player/Sunfish advantage.",
+   "Removed score from Sunfish move output.",
+   "Fixed nb mode move numbering: Sunfish's 2nd move showed as '1. move'",
 }
 
 -- manifest.txt ======= end
@@ -3697,6 +3699,7 @@ function main(playAsBlack, showHeader)
          print("Captured: " .. renderCaptured(capturedByEngine, opponentSymbols))
          table.insert(moveHistory, {notation = engineMoveNotation, by = "sunfish"})
          pos = rotated:move(enginemove)
+         blackMoves = 1
          pos.score = 0
          gameHistory[tpKey(pos)] = true
          positionCounts[tpKey(pos)] = (positionCounts[tpKey(pos)] or 0) + 1
@@ -3706,6 +3709,7 @@ function main(playAsBlack, showHeader)
          moveSnapshots[0].lastMove = lastMove
          moveSnapshots[0].capturedByEngine = {table.unpack(capturedByEngine)}
          moveSnapshots[0].moveHistory = {table.unpack(moveHistory)}
+         moveSnapshots[0].blackMoves = blackMoves
       end
    end
 
