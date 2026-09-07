@@ -350,8 +350,8 @@ emptySquareSymbols_unicode = {
    light = '\xe2\x97\xa6'
 }
 emptySquareSymbols_unicode2 = {
-   dark = ':',
-   light = '.'
+   dark = '\xe2\x96\xa0',
+   light = '\xe2\x96\xa1'
 }
 emptySquareSymbols_unicode3 = {
    dark = ' ',
