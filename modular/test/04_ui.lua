@@ -165,6 +165,7 @@ function printboard(board, lastMove, checkers, guards, isMate, hints, skipScore)
    end
 
    print("")
+   print("[debug] printboard called, skipScore=" .. tostring(skipScore))
    if not skipScore then
       printEngineScore()
    end
