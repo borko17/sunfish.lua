@@ -198,6 +198,11 @@ function search(pos, maxn, history)
       local result = {realSearch(pos, maxn, history)}
       STEP_peek_time = STEP_peek_time + (os.clock() - t0)
       STEP_peek_calls = STEP_peek_calls + 1
+      -- `nodes` is search.lua's own global counter, incremented once per
+      -- bound() call - reading it right after the peek search returns
+      -- tells us how many bound() calls one depth=1 MTD-bi pass made,
+      -- even with maxn=0 (the budget check only runs BETWEEN depths).
+      print("[debug] peek search: bound() called " .. tostring(nodes) .. " times (maxn=" .. tostring(maxn) .. ")")
       return table.unpack(result)
    end
 
