@@ -16,7 +16,7 @@ NODES_SEARCHED = 4000 -- node budget/search; soft limit, checked only between de
 TABLE_SIZE = NODES_SEARCHED * 25 -- scaled off NODES_SEARCHED so it doesn't thrash; upstream's 1e6 too heavy for Luaj-jse on phone
 
 -- Node budget for the quiet peek-search run right after the player's own move (both normal games and Challenge mode), just to refresh the displayed Score line before Sunfish replies. Kept small since it's a display-only lookup.
-SCORE_PEEK_NODES = 300
+SCORE_PEEK_NODES = 1
 
 CHALLENGE_ENGINE_NODES = 1000 -- separate, weaker budget for Sunfish's replies in Challenge mode
 CHALLENGE_MIN_PIECES = 10
