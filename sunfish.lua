@@ -43,6 +43,11 @@ CHANGELOG = {
 
 local GITHUB_RAW_URL = "https://raw.githubusercontent.com/borko17/sunfish.lua/main/docs/update.txt"
 
+-- Console output helpers (wrap binding.exec("echo -X " .. msg) calls for readability)
+local function echoE(msg) binding.exec("echo -e " .. msg) end -- error
+local function echoS(msg) binding.exec("echo -s " .. msg) end -- success
+local function echoW(msg) binding.exec("echo -w " .. msg) end -- warning/heading
+
 -- Extracts CHANGELOG table from raw script text (so 'u' shows the remote version's changelog)
 local function parseChangelog(text)
    local body = text:match('CHANGELOG%s*=%s*{(.-)}')
@@ -121,10 +126,7 @@ local function checkForUpdate()
    end
 end
 
--- Console output helpers (wrap binding.exec("echo -X " .. msg) calls for readability)
-local function echoE(msg) binding.exec("echo -e " .. msg) end -- error
-local function echoS(msg) binding.exec("echo -s " .. msg) end -- success
-local function echoW(msg) binding.exec("echo -w " .. msg) end -- warning/heading
+
 
 
 -- core.lua =======
