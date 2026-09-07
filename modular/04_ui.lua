@@ -154,7 +154,7 @@ function printEngineScore()
    end
 end
 
-function printboard(board, lastMove, checkers, guards, isMate, hints)
+function printboard(board, lastMove, checkers, guards, isMate, hints, skipScore)
    checkers = checkers or {}
    guards = guards or {}
    hints = hints or {}
@@ -165,7 +165,9 @@ function printboard(board, lastMove, checkers, guards, isMate, hints)
    end
 
    print("")
-   printEngineScore()
+   if not skipScore then
+      printEngineScore()
+   end
    local topBorder, sideBorder, bottomBorder
    if usingUnicodePieces() then
       local horiz = '\xe2\x95\x90'  -- ═
