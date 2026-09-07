@@ -1,11 +1,19 @@
 
 -- sunfish.lua Chess engine, Lua port chain: 1. Original algorithm: Sunfish (Python) by Thomas Ahle https://github.com/thomasahle/sunfish - BSD license 2. Initial Lua transpilation attributed to Soumith Chintala 3. Extended for Yantra Launcher / Android (Luaj-jse 3.0.1), with UI, save/load, puzzle mode, and search tuning, by borko17 (https://github.com/borko17/sunfish-lua) (with help from Claude AI).
 
--- CONFIG: Options at the top
---------------------
-USE_UNICODE_PIECES = false
-USE_UNICODE_INVERTED_PIECES = false
+-- config.lua =======
+-- ------------------
 SHOW_ANNOTATIONS = true
+DISPLAY_MODE_STEP = 0 -- 0-7; 
+-- DISPLAY_MODE_STEPS (0-7):
+-- [0] = Letters
+-- [1] = Letters 2
+-- [2] = Unicode
+-- [3] = Unicode (inverted)
+-- [4] = Unicode 2
+-- [5] = Unicode 2 (inverted)
+-- [6] = Unicode 3
+-- [7] = Unicode 3 (inverted)
 
 NODES_SEARCHED = 4000 -- node budget/search; soft limit, checked only between depths
 TABLE_SIZE = NODES_SEARCHED * 25 -- scaled off NODES_SEARCHED so it doesn't thrash; upstream's 1e6 too heavy for Luaj-jse on phone
@@ -18,21 +26,21 @@ CHALLENGE_HINTS_ENABLED = false -- shows suggested move; toggle with 'th'
 
 MATE_VALUE = 30000 -- exceeds 8*queen+2*(rook+knight+bishop); king value is double this
 MATE_UPPER = 60000 + (10 * 2529) -- search() scores mate near this, not MATE_VALUE - callers must match
---------------------
+-- ------------------
+-- config.lua ======= end
 
--- Console output helpers (wrap binding.exec("echo -X " .. msg) calls for readability)
-local function echoE(msg) binding.exec("echo -e " .. msg) end -- error
-local function echoS(msg) binding.exec("echo -s " .. msg) end -- success
-local function echoW(msg) binding.exec("echo -w " .. msg) end -- warning/heading
+-- manifest.txt =======
 
-
-SCRIPT_VERSION = "2.609011550"
+SCRIPT_VERSION = "2.609062100"
 
 CHANGELOG = {
-
-   "'d' now cycles through three display modes (Letters -> Unicode -> Unicode inverted) instead of a simple toggle, swapping light/dark piece and empty-square symbols for dark-background themes.",
-
+   "Added support for starting a new game as Black with the 'nb' command.",
+   "'d' now cycles through eight display modes, instead of three.",
+   "Moved score display to the top of the board with color-coded player/Sunfish advantage.",
+   "Removed score from Sunfish move output.",
 }
+
+-- manifest.txt ======= end
 
 local GITHUB_RAW_URL = "https://raw.githubusercontent.com/borko17/sunfish.lua/main/docs/update.txt"
 
@@ -114,7 +122,13 @@ local function checkForUpdate()
    end
 end
 
--- core.lua ======= 1740
+-- Console output helpers (wrap binding.exec("echo -X " .. msg) calls for readability)
+local function echoE(msg) binding.exec("echo -e " .. msg) end -- error
+local function echoS(msg) binding.exec("echo -s " .. msg) end -- success
+local function echoW(msg) binding.exec("echo -w " .. msg) end -- warning/heading
+
+
+-- core.lua =======
 
 A1, H1, A8, H8 = 91, 98, 21, 28 -- board is a 120-char padded string for cheap off-board checks
 initial =
@@ -796,7 +810,7 @@ function findCheckers(p)
    return checkers
 end
 
--- -Search logic
+-- Search logic
 nodes = 0 -- module-scoped: shared by search()'s loop and the inner bound() closure
 
 -- Quiescence value floor: deeper nodes admit slightly weaker captures/threats before cutting off
@@ -811,8 +825,245 @@ NULL_MARGIN = -200
 
 -- core.lua ======= end
 
+-- search.lua =======
 
--- search.lua ======= 1300
+-- bound() is defined ONCE at load time (not as a closure re-created inside
+-- search() on every call) so Luaj doesn't pay the cost of re-instantiating
+-- a ~230-line nested function on every search() call, including cheap
+-- SCORE_PEEK_NODES probes. MATE_LOWER/MATE_UPPER/EVAL_ROUGHNESS, which used
+-- to be search()'s upvalues, are passed in via `ctx` instead; `nodes` stays
+-- a plain global exactly as before.
+local function ceilingFor(p, depth, val, ctx)
+   if depth > 4 or val >= ctx.MATE_LOWER then
+      return ctx.MATE_UPPER
+   end
+   return p.score + val + math.max(depth - 1, 0) * QS_A
+end
+
+local function bound(p, gamma, depth, root, ctx)
+   nodes = nodes + 1
+
+   if depth < 0 then
+      depth = 0
+   end
+
+   if p.score <= -ctx.MATE_LOWER then
+      return -ctx.MATE_UPPER
+   end
+
+   local entry, storedBound, killer = tp_get(
+      p,
+      depth,
+      true
+   )
+
+   -- Root probes intentionally don't consume a stored score bound.
+   if not root and storedBound then
+      if storedBound.lower >= gamma then
+         return storedBound.lower
+      end
+
+      if storedBound.upper < gamma then
+         return storedBound.upper
+      end
+   end
+
+   -- Repetition detection: seen-before position scores as draw (0); skipped at root/depth 0, matching upstream
+   if not root and depth > 0 and ctx.history[tpKey(p)] then
+      return 0
+   end
+
+   local best = -ctx.MATE_UPPER
+   local bestMove = nil
+   local live = false
+
+   -- "calm" position: no side is deep in a mating attack and at least one
+   -- major/minor piece remains on the board (avoids zugzwang in K+P endings)
+   local calm = math.abs(p.score) < 750 and hasMajorOrMinorPiece(p.board)
+   local guard = (not root) and calm
+
+   -- Deep null-move "fuel probe" (depth >= 6): passing must beat
+   -- pos.score + NULL_MARGIN by a two-ply-reduced search to count.
+   local nmr = false
+   if calm and depth >= 6 then
+      local t = p.score + NULL_MARGIN
+      local probe = -bound(p:rotate(true), 1 - t, depth - 7, false, ctx)
+      nmr = probe >= t
+   end
+
+   if killer == nil and depth > 2 then
+      bound(p, gamma, depth - 3, true, ctx)
+
+      local _, _, iidMove = tp_get(
+         p,
+         depth,
+         true
+      )
+
+      killer = iidMove
+   end
+
+   local valLower = QS - depth * QS_A
+
+   -- Collect candidate moves in evaluation order (short null included).
+   local ordered = {}
+
+   -- Short null-move: only offered as a candidate inside the move loop
+   -- (not a separate early-return block), guard-gated, depth in (2,6)
+   if guard and depth > 2 and depth < 6 then
+      table.insert(ordered, { isNull = true })
+   end
+
+   if depth == 0 then
+      table.insert(ordered, { isNull = true, qsStandPat = true })
+   end
+
+   if killer and (p:value(killer) >= valLower or depth > 0) and ceilingFor(p, depth, p:value(killer), ctx) >= gamma then
+      table.insert(ordered, { value = p:value(killer), move = killer })
+   end
+
+   local genned = {}
+   for _, move in ipairs(p:genMoves()) do
+      local val = p:value(move)
+      if val >= valLower or depth > 0 then
+         table.insert(genned, { value = val, move = move })
+      end
+   end
+   table.sort(genned, function(a, b) return a.value > b.value end)
+   for _, item in ipairs(genned) do
+      table.insert(ordered, item)
+   end
+
+   for _, item in ipairs(ordered) do
+      local score
+
+      if item.isNull then
+         if item.qsStandPat then
+            score = p.score
+         else
+            -- Cap the pass at static eval + one EVAL_ROUGHNESS bucket so
+            -- it stays monotone and below the positive mate band.
+            local cap = p.score + ctx.EVAL_ROUGHNESS
+            if cap >= gamma then
+               score = math.min(cap, -bound(p:rotate(true), 1 - gamma, depth - 4, false, ctx))
+               if score >= gamma then
+                  local proof = p:kingCapture()
+                  if proof then
+                     item.move = proof
+                     score = ctx.MATE_UPPER
+                     live = true
+                  end
+               end
+            else
+               score = cap
+            end
+         end
+      elseif item.value >= ctx.MATE_LOWER then
+         -- Intrinsic mate-band move: exact MATE_UPPER, never searched.
+         score = ctx.MATE_UPPER
+         live = true
+      else
+         local cap = ceilingFor(p, depth, item.value, ctx)
+         if cap < gamma then
+            -- Futility cutoff: sorted stream means nothing after this can improve it.
+            if cap > best then best = cap end
+            break
+         end
+
+         local reduced = 0
+         if guard and depth >= 7 and item.value < LMR then
+            reduced = reduced + 1
+         end
+         if nmr then
+            reduced = reduced + 1
+         end
+         local moveDepth = depth - 1 - reduced
+
+         score = math.min(cap, -bound(p:move(item.move), 1 - gamma, moveDepth, false, ctx))
+
+         if score > -ctx.MATE_UPPER then
+            live = true
+         end
+      end
+
+      if score > best then
+         best = score
+         bestMove = item.move
+      end
+
+      if best >= gamma then
+         if item.move ~= nil and depth > 0 then
+            tp_set(p, depth, true, nil, nil, item.move)
+         end
+         break
+      end
+   end
+
+   -- Terminal classification: no legal (non-king-capturing) reply seen.
+   -- The mate score carries the remaining depth so the winner prefers the
+   -- fastest mate and the loser drags it out (upstream issue #11).
+   if depth > 0 and not live then
+      local moves = p:genMoves()
+      local noLegalMove = true
+
+      for _, move in ipairs(moves) do
+         local child = p:move(move)
+
+         if not child:kingCapture() then
+            noLegalMove = false
+            break
+         end
+      end
+
+      if noLegalMove then
+         local mate = math.max(1 - ctx.MATE_UPPER, -ctx.MATE_LOWER - depth * ctx.EVAL_ROUGHNESS)
+
+         if p:rotate(true):kingCapture() then
+            best = mate
+         else
+            best = 0
+         end
+
+         bestMove = nil
+      end
+   end
+
+   if root and best >= gamma and bestMove ~= nil then -- root move needed after depth finishes
+      tp_set(
+         p,
+         nil,
+         nil,
+         nil,
+         nil,
+         bestMove
+      )
+   end
+
+   if not root then -- store lower/upper bound for non-root searches
+      local oldLower = storedBound and
+         storedBound.lower or -ctx.MATE_UPPER
+
+      local oldUpper = storedBound and
+         storedBound.upper or ctx.MATE_UPPER
+
+      if best >= gamma then
+         oldLower = best
+      else
+         oldUpper = best
+      end
+
+      tp_set(
+         p,
+         depth,
+         true,
+         oldLower,
+         oldUpper,
+         nil
+      )
+   end
+
+   return best
+end
 
 function search(pos, maxn, history)
    maxn = maxn or NODES_SEARCHED
@@ -831,10 +1082,12 @@ function search(pos, maxn, history)
    local reachedDepth = 0
    local finalScore = 0
 
-   local MATE_LOWER = 60000 - (13 * 2529)
-   local MATE_UPPER = 60000 + (10 * 2529)
-
-   local EVAL_ROUGHNESS = 15
+   local ctx = {
+      MATE_LOWER = 60000 - (13 * 2529),
+      MATE_UPPER = 60000 + (10 * 2529),
+      EVAL_ROUGHNESS = 15,
+      history = history,
+   }
 
    -- endgame king table once queens are off (KRK/KQK convergence); pst.K restored after search() since pst is shared/global
    local prevPstK = pst.K
@@ -855,251 +1108,16 @@ function search(pos, maxn, history)
    tp_head = 1
    tp_capacity = 0
 
-   local function bound(p, gamma, depth, root)
-      nodes = nodes + 1
-
-      if depth < 0 then
-         depth = 0
-      end
-
-      if p.score <= -MATE_LOWER then
-         return -MATE_UPPER
-      end
-
-      local entry, storedBound, killer = tp_get(
-         p,
-         depth,
-         true
-      )
-
-      -- Root probes intentionally don't consume a stored score bound.
-      if not root and storedBound then
-         if storedBound.lower >= gamma then
-            return storedBound.lower
-         end
-
-         if storedBound.upper < gamma then
-            return storedBound.upper
-         end
-      end
-
-      -- Repetition detection: seen-before position scores as draw (0); skipped at root/depth 0, matching upstream
-      if not root and depth > 0 and history[tpKey(p)] then
-         return 0
-      end
-
-      local best = -MATE_UPPER
-      local bestMove = nil
-      local live = false
-
-      -- "calm" position: no side is deep in a mating attack and at least one
-      -- major/minor piece remains on the board (avoids zugzwang in K+P endings)
-      local calm = math.abs(p.score) < 750 and hasMajorOrMinorPiece(p.board)
-      local guard = (not root) and calm
-
-      -- Futility ceiling for a move worth `val`: capped at MATE_UPPER once
-      -- depth is deep enough or the move itself is already mate-band;
-      -- otherwise a static estimate scaled by remaining depth (QS_A).
-      local function ceiling(val)
-         if depth > 4 or val >= MATE_LOWER then
-            return MATE_UPPER
-         end
-         return p.score + val + math.max(depth - 1, 0) * QS_A
-      end
-
-      -- Deep null-move "fuel probe" (depth >= 6): passing must beat
-      -- pos.score + NULL_MARGIN by a two-ply-reduced search to count.
-      local nmr = false
-      if calm and depth >= 6 then
-         local t = p.score + NULL_MARGIN
-         local probe = -bound(p:rotate(true), 1 - t, depth - 7, false)
-         nmr = probe >= t
-      end
-
-      if killer == nil and depth > 2 then
-         bound(p, gamma, depth - 3, true)
-
-         local _, _, iidMove = tp_get(
-            p,
-            depth,
-            true
-         )
-
-         killer = iidMove
-      end
-
-      local valLower = QS - depth * QS_A
-
-      -- Collect candidate moves in evaluation order (short null included).
-      local ordered = {}
-
-      -- Short null-move: only offered as a candidate inside the move loop
-      -- (not a separate early-return block), guard-gated, depth in (2,6)
-      if guard and depth > 2 and depth < 6 then
-         table.insert(ordered, { isNull = true })
-      end
-
-      if depth == 0 then
-         table.insert(ordered, { isNull = true, qsStandPat = true })
-      end
-
-      if killer and (p:value(killer) >= valLower or depth > 0) and ceiling(p:value(killer)) >= gamma then
-         table.insert(ordered, { value = p:value(killer), move = killer })
-      end
-
-      local genned = {}
-      for _, move in ipairs(p:genMoves()) do
-         local val = p:value(move)
-         if val >= valLower or depth > 0 then
-            table.insert(genned, { value = val, move = move })
-         end
-      end
-      table.sort(genned, function(a, b) return a.value > b.value end)
-      for _, item in ipairs(genned) do
-         table.insert(ordered, item)
-      end
-
-      for _, item in ipairs(ordered) do
-         local score
-
-         if item.isNull then
-            if item.qsStandPat then
-               score = p.score
-            else
-               -- Cap the pass at static eval + one EVAL_ROUGHNESS bucket so
-               -- it stays monotone and below the positive mate band.
-               local cap = p.score + EVAL_ROUGHNESS
-               if cap >= gamma then
-                  score = math.min(cap, -bound(p:rotate(true), 1 - gamma, depth - 4, false))
-                  if score >= gamma then
-                     local proof = p:kingCapture()
-                     if proof then
-                        item.move = proof
-                        score = MATE_UPPER
-                        live = true
-                     end
-                  end
-               else
-                  score = cap
-               end
-            end
-         elseif item.value >= MATE_LOWER then
-            -- Intrinsic mate-band move: exact MATE_UPPER, never searched.
-            score = MATE_UPPER
-            live = true
-         else
-            local cap = ceiling(item.value)
-            if cap < gamma then
-               -- Futility cutoff: sorted stream means nothing after this can improve it.
-               if cap > best then best = cap end
-               break
-            end
-
-            local reduced = 0
-            if guard and depth >= 7 and item.value < LMR then
-               reduced = reduced + 1
-            end
-            if nmr then
-               reduced = reduced + 1
-            end
-            local moveDepth = depth - 1 - reduced
-
-            score = math.min(cap, -bound(p:move(item.move), 1 - gamma, moveDepth, false))
-
-            if score > -MATE_UPPER then
-               live = true
-            end
-         end
-
-         if score > best then
-            best = score
-            bestMove = item.move
-         end
-
-         if best >= gamma then
-            if item.move ~= nil and depth > 0 then
-               tp_set(p, depth, true, nil, nil, item.move)
-            end
-            break
-         end
-      end
-
-      -- Terminal classification: no legal (non-king-capturing) reply seen.
-      -- The mate score carries the remaining depth so the winner prefers the
-      -- fastest mate and the loser drags it out (upstream issue #11).
-      if depth > 0 and not live then
-         local moves = p:genMoves()
-         local noLegalMove = true
-
-         for _, move in ipairs(moves) do
-            local child = p:move(move)
-
-            if not child:kingCapture() then
-               noLegalMove = false
-               break
-            end
-         end
-
-         if noLegalMove then
-            local mate = math.max(1 - MATE_UPPER, -MATE_LOWER - depth * EVAL_ROUGHNESS)
-
-            if p:rotate(true):kingCapture() then
-               best = mate
-            else
-               best = 0
-            end
-
-            bestMove = nil
-         end
-      end
-
-      if root and best >= gamma and bestMove ~= nil then -- root move needed after depth finishes
-         tp_set(
-            p,
-            nil,
-            nil,
-            nil,
-            nil,
-            bestMove
-         )
-      end
-
-      if not root then -- store lower/upper bound for non-root searches
-         local oldLower = storedBound and
-            storedBound.lower or -MATE_UPPER
-
-         local oldUpper = storedBound and
-            storedBound.upper or MATE_UPPER
-
-         if best >= gamma then
-            oldLower = best
-         else
-            oldUpper = best
-         end
-
-         tp_set(
-            p,
-            depth,
-            true,
-            oldLower,
-            oldUpper,
-            nil
-         )
-      end
-
-      return best
-   end
-
    -- Iterative deepening MTD-bi.
    local prevDepthTime = startTime
    for depth = 1, 98 do
-      local lower = 1 - MATE_UPPER
-      local upper = MATE_UPPER
+      local lower = 1 - ctx.MATE_UPPER
+      local upper = ctx.MATE_UPPER
       local gamma = 0
       local score = 0
 
-      while lower < upper - EVAL_ROUGHNESS do
-         score = bound(pos, gamma, depth, true)
+      while lower < upper - ctx.EVAL_ROUGHNESS do
+         score = bound(pos, gamma, depth, true, ctx)
 
          if score >= gamma then
             lower = score
@@ -1133,7 +1151,7 @@ function search(pos, maxn, history)
       ))
 
       if nodes >= maxn or
-         math.abs(score) >= MATE_UPPER then
+         math.abs(score) >= ctx.MATE_UPPER then
          break
       end
    end
@@ -1158,9 +1176,21 @@ emptySquareSymbols_unicode = {
    dark = '\xe2\x80\xa2',
    light = '\xe2\x97\xa6'
 }
+emptySquareSymbols_unicode2 = {
+   dark = ':',
+   light = '.'
+}
+emptySquareSymbols_unicode3 = {
+   dark = ' ',
+   light = ' '
+}
 emptySquareSymbols_letters = {
    dark = ':',
    light = '.'
+}
+emptySquareSymbols_letters2 = {
+   dark = ' ',
+   light = ' '
 }
 
 whiteSymbols_unicode = {
@@ -1179,54 +1209,78 @@ blackSymbols_letters = {
    K = 'k', Q = 'q', R = 'r', B = 'b', N = 'n', P = 'p',
 }
 
-whiteSymbols = USE_UNICODE_PIECES and whiteSymbols_unicode or whiteSymbols_letters
-blackSymbols = USE_UNICODE_PIECES and blackSymbols_unicode or blackSymbols_letters
-emptySquareSymbols = USE_UNICODE_PIECES and emptySquareSymbols_unicode or emptySquareSymbols_letters
+-- Default to Letters mode (DISPLAY_MODE_STEP 0); updateDisplayMode() overrides these once called.
+whiteSymbols = whiteSymbols_letters
+blackSymbols = blackSymbols_letters
+emptySquareSymbols = emptySquareSymbols_letters
 
 -- search.lua ======= end
 
+-- ui.lua =======
 
+-- Cycles: Letters -> Letters 2 -> Unicode -> Unicode (inverted) -> Unicode 2 -> Unicode 2 (inverted) -> Unicode 3 -> Unicode 3 (inverted) -> Letters
+-- DISPLAY_MODE_STEP (0-7) is the single source of truth; everything else is derived from it here.
+DISPLAY_MODE_STEP = DISPLAY_MODE_STEP or 0
 
-
--- ui.lua ======= 0755
+DISPLAY_MODE_STEPS = {
+   [0] = { unicode = false, inverted = false, emptySet = 1, lettersEmpty2 = false, name = "Letters" },
+   [1] = { unicode = false, inverted = false, emptySet = 1, lettersEmpty2 = true,  name = "Letters 2" },
+   [2] = { unicode = true,  inverted = false, emptySet = 1, lettersEmpty2 = false, name = "Unicode" },
+   [3] = { unicode = true,  inverted = true,  emptySet = 1, lettersEmpty2 = false, name = "Unicode (inverted)" },
+   [4] = { unicode = true,  inverted = false, emptySet = 2, lettersEmpty2 = false, name = "Unicode 2" },
+   [5] = { unicode = true,  inverted = true,  emptySet = 2, lettersEmpty2 = false, name = "Unicode 2 (inverted)" },
+   [6] = { unicode = true,  inverted = false, emptySet = 3, lettersEmpty2 = false, name = "Unicode 3" },
+   [7] = { unicode = true,  inverted = true,  emptySet = 3, lettersEmpty2 = false, name = "Unicode 3 (inverted)" },
+}
 
 function updateDisplayMode()
-   if USE_UNICODE_INVERTED_PIECES then
-      USE_UNICODE_PIECES = true
+   local s = DISPLAY_MODE_STEPS[DISPLAY_MODE_STEP]
+
+   whiteSymbols = s.unicode and whiteSymbols_unicode or whiteSymbols_letters
+   blackSymbols = s.unicode and blackSymbols_unicode or blackSymbols_letters
+   if s.unicode and s.emptySet == 2 then
+      emptySquareSymbols = emptySquareSymbols_unicode2
+   elseif s.unicode and s.emptySet == 3 then
+      emptySquareSymbols = emptySquareSymbols_unicode3
+   elseif not s.unicode and s.lettersEmpty2 then
+      emptySquareSymbols = emptySquareSymbols_letters2
+   else
+      emptySquareSymbols = s.unicode and emptySquareSymbols_unicode or emptySquareSymbols_letters
    end
 
-   whiteSymbols = USE_UNICODE_PIECES and whiteSymbols_unicode or whiteSymbols_letters
-   blackSymbols = USE_UNICODE_PIECES and blackSymbols_unicode or blackSymbols_letters
-   emptySquareSymbols = USE_UNICODE_PIECES and emptySquareSymbols_unicode or emptySquareSymbols_letters
-
-   if USE_UNICODE_INVERTED_PIECES and USE_UNICODE_PIECES then
+   if s.inverted then
       whiteSymbols, blackSymbols = blackSymbols, whiteSymbols
       emptySquareSymbols = { light = emptySquareSymbols.dark, dark = emptySquareSymbols.light }
    end
+
+-- "Captured" lists always store the captured piece's letter uppercased regardless of its
+-- real color, so the caption glyph set has to be chosen by who captured, not board case.
+-- ownSymbols renders what the player captured (opponent's set); opponentSymbols renders
+-- what Sunfish captured (player's own set) - swapped from White's-perspective defaults
+-- when PLAYER_IS_BLACK, so captured pieces always show their true color.
+   if PLAYER_IS_BLACK then
+      ownSymbols, opponentSymbols = whiteSymbols, blackSymbols
+   else
+      ownSymbols, opponentSymbols = blackSymbols, whiteSymbols
+   end
 end
 
--- Cycles: Letters -> Unicode -> Unicode Inverted -> Letters
 function cycleDisplayMode()
-   if not USE_UNICODE_PIECES then
-      USE_UNICODE_PIECES = true
-      USE_UNICODE_INVERTED_PIECES = false
-   elseif not USE_UNICODE_INVERTED_PIECES then
-      USE_UNICODE_INVERTED_PIECES = true
-   else
-      USE_UNICODE_PIECES = false
-      USE_UNICODE_INVERTED_PIECES = false
-   end
+   DISPLAY_MODE_STEP = (DISPLAY_MODE_STEP + 1) % 8
    updateDisplayMode()
-   if USE_UNICODE_PIECES and USE_UNICODE_INVERTED_PIECES then
-      return "Unicode (inverted)"
-   elseif USE_UNICODE_PIECES then
-      return "Unicode"
-   else
-      return "Letters"
-   end
+   return DISPLAY_MODE_STEPS[DISPLAY_MODE_STEP].name
+end
+
+function usingUnicodePieces()
+   return DISPLAY_MODE_STEPS[DISPLAY_MODE_STEP].unicode
 end
 
 -- User interface
+
+-- When true, the player is Black and the board is shown/entered from Black's side:
+-- 'a1' as typed/shown means the square physically in the a1 corner of Black's view,
+-- i.e. absolute h8. Set by 'nb' in main(), read by parse()/render()/printboard().
+PLAYER_IS_BLACK = false
 
 function parse(c)
    if not c then return nil end
@@ -1234,11 +1288,17 @@ function parse(c)
    if not (p and v and tonumber(v)) then return nil end
 
    local fil, rank = string.byte(p) - string.byte('a'), tonumber(v) - 1
+   if PLAYER_IS_BLACK then
+      fil, rank = 7 - fil, 7 - rank
+   end
    return A1 + fil - 10*rank
 end
 
 function render(i)
    local rank, fil = math.floor((i - A1) / 10), (i - A1) % 10
+   if PLAYER_IS_BLACK then
+      rank, fil = -7 - rank, 7 - fil -- rank here is already negated (-7..0), so flip within that range
+   end
    return string.char(fil + string.byte('a')) .. tostring(-rank + 1)
 end
 
@@ -1289,7 +1349,30 @@ strsplit = function(a)
    return out
 end
 
-function printboard(board, lastMove, checkers, guards, isMate, hints)
+function setEngineScore(score)
+   CURRENT_ENGINE_SCORE = score
+end
+
+function clearEngineScore()
+   CURRENT_ENGINE_SCORE = nil
+end
+
+function printEngineScore()
+   local score = CURRENT_ENGINE_SCORE
+   if score == nil then
+      return
+   end
+
+   if score < 0 then
+      echoS(string.format("➜    Score: +%d (You)", math.abs(score)))
+   elseif score > 0 then
+      echoE(string.format("➜    Score: +%d (Sunfish)", score))
+   else
+      echoW("➜    Score: 0 (equal)")
+   end
+end
+
+function printboard(board, lastMove, checkers, guards, isMate, hints, skipScore)
    checkers = checkers or {}
    guards = guards or {}
    hints = hints or {}
@@ -1299,10 +1382,12 @@ function printboard(board, lastMove, checkers, guards, isMate, hints)
       highlight[lastMove[2]] = true
    end
 
-   local l = strsplit(board, '\n')
    print("")
+   if not skipScore then
+      printEngineScore()
+   end
    local topBorder, sideBorder, bottomBorder
-   if USE_UNICODE_PIECES then
+   if usingUnicodePieces() then
       local horiz = '\xe2\x95\x90'  -- ═
       topBorder    = "  \xe2\x95\x94" .. string.rep(horiz, 26) .. "\xe2\x95\x97"  -- ╔ ... ╗
       sideBorder   = '\xe2\x95\x91'                                               -- ║
@@ -1314,15 +1399,34 @@ function printboard(board, lastMove, checkers, guards, isMate, hints)
    end
 
    print(topBorder)
-   for k = 3, 10 do
-      local rank = 11 - k
-      local v = l[k]
+-- Rank rows top-to-bottom, and files within each row left-to-right.
+-- NOTE: the board string passed in here is already physically rotated 180°
+-- when PLAYER_IS_BLACK (see Position:rotate() in main()), so the *reading*
+-- order must stay the same as White's (k=3..10, i=2..9) - only the printed
+-- rank/file labels flip, so the board is shown from Black's side (rank 1 at
+-- top, h-file on the left) without re-reversing the already-rotated string.
+   local kFrom, kTo, kStep = 3, 10, 1
+   local iFrom, iTo, iStep = 2, 9, 1
+   for k = kFrom, kTo, kStep do
+      local rank = PLAYER_IS_BLACK and (k - 2) or (11 - k)
       local line = {}
       table.insert(line, tostring(rank) .. " " .. sideBorder .. "  ")
-      for i = 2, 9 do
-         local c = v:sub(i, i)
-         local file = i - 1
+      for i = iFrom, iTo, iStep do
          local idx = (k - 1) * 10 + (i - 1)
+-- Read directly from the flat board string at its absolute position (idx+1, 1-indexed),
+-- rather than splitting into lines by '\n' first: after Position:rotate() the '\n' bytes
+-- move around inside what used to be row boundaries, so a naive per-line split misreads
+-- the board (dropped/shifted files). Absolute-index lookup stays correct either way.
+         local c = board:sub(idx + 1, idx + 1)
+-- Internally the engine always stores "current/user's side" as uppercase
+-- (see Position:rotate()), regardless of that side's real color. For
+-- display we want the real-world convention (White=uppercase, Black=
+-- lowercase), so when PLAYER_IS_BLACK, flip the case of piece letters
+-- just for rendering - the underlying board string itself is untouched.
+         if PLAYER_IS_BLACK and c:match('%a') then
+            c = c:match('%u') and c:lower() or c:upper()
+         end
+         local file = i - 1
          local sym
          if c == '.' then
             if (file + rank) % 2 == 0 then
@@ -1330,7 +1434,7 @@ function printboard(board, lastMove, checkers, guards, isMate, hints)
             else
                sym = emptySquareSymbols.dark
             end
-         elseif USE_UNICODE_PIECES then
+         elseif usingUnicodePieces() then
             local isWhitePiece = c:match('%u') ~= nil -- uppercase = white piece
             local upperC = c:upper()
             local set = isWhitePiece and whiteSymbols or blackSymbols
@@ -1382,7 +1486,11 @@ end
       print(table.concat(line))
    end
    print(bottomBorder)
-   print("     a  b  c  d  e  f  g  h")
+   if PLAYER_IS_BLACK then
+      print("     h  g  f  e  d  c  b  a")
+   else
+      print("     a  b  c  d  e  f  g  h")
+   end
    print("")
 end
 
@@ -1579,8 +1687,46 @@ function expandSaveRows(compact)
    return rows
 end
 
+-- Position:rotate() is a full 180-degree spin of the board, which maps the
+-- e-file to the d-file and vice versa - so after an ODD number of rotate()
+-- calls, King and Queen end up swapped relative to their true file when the
+-- board is read through the fixed A1+file-10*(rank-1) absolute-position
+-- formula (all other pieces are symmetric across that mapping, so they're
+-- unaffected). saveGame()/loadGame() need the corrected (true FEN) layout
+-- regardless of how many rotations pos.board has been through, so this
+-- swaps K<->Q back onto A1/H1/A8/H8-relative positions e1/d1/e8/d8 whenever
+-- that rotation count is odd.
+--
+-- rotationCount is (PLAYER_IS_BLACK and 1 or 0) + whiteMoves + blackMoves:
+-- every move() call rotates pos exactly once, no matter whose move it is,
+-- and main()'s one-time initial rotate() for a Black-playing user adds one
+-- more on top - all three terms count toward parity, none can be dropped.
+function correctKingQueenParity(boardStr120, rotationCount)
+   if rotationCount % 2 == 0 then return boardStr120 end
+   local e1, d1 = A1 + 4, A1 + 3
+   local e8, d8 = A1 + 4 - 70, A1 + 3 - 70
+   local chars = {}
+   for i = 1, #boardStr120 do chars[i] = boardStr120:sub(i, i) end
+   local function swap(a, b)
+      chars[a + __1], chars[b + __1] = chars[b + __1], chars[a + __1]
+   end
+   swap(e1, d1)
+   swap(e8, d8)
+   return table.concat(chars)
+end
+
 function saveGame(pos, lastMove, capturedByUser, capturedByEngine, whiteMoves, blackMoves, halfmoveClock, nextToMove, moveHistory, startingBoard, extra)
+   -- Position:move() rotates the position after every ply.  Therefore the
+   -- current orientation is determined by the initial side orientation plus
+   -- the number of actual plies, NOT by whiteMoves/blackMoves.  In nb mode
+   -- the opening Sunfish move is not included in the blackMoves counter, so
+   -- using those counters here caused saved boards to be rotated incorrectly.
+   local plyCount = moveHistory and #moveHistory or 0
+   local rotationCount = (PLAYER_IS_BLACK and 1 or 0) + plyCount
    local boardStr120 = arrayToBoard(pos.board)
+   if rotationCount % 2 == 1 then
+      boardStr120 = arrayToBoard(pos:rotate().board)
+   end
    local boardLines = {}
    for rank = 8, 1, -1 do
       local line = {}
@@ -1615,6 +1761,9 @@ function saveGame(pos, lastMove, capturedByUser, capturedByEngine, whiteMoves, b
    local startSource = startingBoard or initial -- always save the starting position (custom or standard initial)
    local startBoardStr = nil
    if startSource then
+-- startingBoard (from main.lua) is now always kept in the true/physical
+-- FEN-like layout already (see main()'s own correctKingQueenParity() call),
+-- same as `initial` - no additional correction needed here.
       local sbLines = {}
       for rank = 8, 1, -1 do
          local line = {}
@@ -1639,6 +1788,7 @@ function saveGame(pos, lastMove, capturedByUser, capturedByEngine, whiteMoves, b
                 '|last:' .. lastMoveStr .. '|ucap:' .. userCapStr .. '|ecap:' .. engineCapStr ..
                 '|wm:' .. whiteMoves .. '|bm:' .. blackMoves .. '|hc:' .. (halfmoveClock or 0) ..
                 '|next:' .. nextStr .. '|hist:' .. histStr ..
+                '|side:' .. (PLAYER_IS_BLACK and 'b' or 'w') .. -- which side the human is playing, so loadGame() can restore board orientation without asking
                 (startBoardStr and ('|start:' .. startBoardStr) or '') ..
                 extraStr ..
                 '|board:' .. compactBoardStr
@@ -1725,7 +1875,27 @@ function loadGame(code)
       local halfmoveClock = tonumber(parts.hc) or 0
       local nextToMove = parts.next or "b"
 
+-- Which side the human was playing when this code was saved (see saveGame()).
+-- Set PLAYER_IS_BLACK from it now, so it's in place for parse() below and
+-- for the rotation-count math right after.
+      local loadedSide = (parts.side == 'b') and 'b' or 'w'
+      PLAYER_IS_BLACK = (loadedSide == 'b')
+
+-- fullBoard is always the true/physical board layout.  Recreate the
+-- orientation of the saved Position from the number of actual plies.
+-- Do not use whiteMoves + blackMoves here: in nb mode the automatic opening
+-- Sunfish move is part of histStr but is not present in the move counters.
+      local plyCount = 0
+      if parts.hist and parts.hist ~= '-' and parts.hist ~= '' then
+         for _ in parts.hist:gmatch('[^,]+') do
+            plyCount = plyCount + 1
+         end
+      end
+      local rotationCount = (PLAYER_IS_BLACK and 1 or 0) + plyCount
       local pos = Position.new(fullBoard, 0, {wc1, wc2}, {bc1, bc2}, ep, 0)
+      if rotationCount % 2 == 1 then
+         pos = pos:rotate()
+      end
 
       local capturedByUser = {}
       if parts.ucap ~= '-' then
@@ -1769,7 +1939,7 @@ function loadGame(code)
          end
       end
 
-      return pos, lastMove, capturedByUser, capturedByEngine, whiteMoves, blackMoves, halfmoveClock, nextToMove, histStr, startingBoard, parts.mode, parts.hints
+      return pos, lastMove, capturedByUser, capturedByEngine, whiteMoves, blackMoves, halfmoveClock, nextToMove, histStr, startingBoard, parts.mode, parts.hints, loadedSide
 
    else -- simple format (board only, 8x8): resets everything else to initial state
       local boardLines = {}
@@ -1831,14 +2001,25 @@ function rebuildHistoryFromMoves(histStr, fallbackPos, startBoard)
       gameHistory[tpKey(replayPos)] = true
       positionCounts[tpKey(replayPos)] = 1
 
+-- Notation in histStr (built by main()'s render() calls) is always the true/
+-- physical algebraic move (e.g. "e2e3" really means e2->e3), independent of
+-- PLAYER_IS_BLACK - so decode it with a fixed, absolute parse here rather
+-- than the global parse() (which flips for PLAYER_IS_BLACK and would
+-- misdecode a Black-playing user's saved history).
+      local function parseAbs(c)
+         local p, v = c:sub(1,1), c:sub(2,2)
+         local fil, rank = string.byte(p) - string.byte('a'), tonumber(v) - 1
+         return A1 + fil - 10*rank
+      end
+
       local ply = 0
       for notation in histStr:gmatch('[^,]+') do
          if #notation < 4 or #notation > 5 then
             error("bad notation length: " .. notation)
          end
 
-         local from = parse(notation:sub(1,2))
-         local to = parse(notation:sub(3,4))
+         local from = parseAbs(notation:sub(1,2))
+         local to = parseAbs(notation:sub(3,4))
          if not from or not to then
             error("unparseable move: " .. notation)
          end
@@ -1890,7 +2071,7 @@ function displayPosition(pos, lastMove, capturedByUser, capturedByEngine, blackM
    if lastMove then
       local moveLabel = blackMoves and (blackMoves .. ". ") or ""
       print("Sunfish " .. moveLabel .. "move: \n" .. render(lastMove[1]) .. render(lastMove[2]))
-      print("Captured: " .. renderCaptured(capturedByEngine, whiteSymbols))
+      print("Captured: " .. renderCaptured(capturedByEngine, opponentSymbols))
    end
    local checkers = findCheckers(pos)
    local guards = findKingGuards(pos, checkers)
@@ -1899,12 +2080,12 @@ function displayPosition(pos, lastMove, capturedByUser, capturedByEngine, blackM
       echoS("Check!")
    end
    printboard(arrayToBoard(pos.board), lastMove, checkers, guards, isMate)
-   print("Captured: " .. renderCaptured(capturedByUser, blackSymbols))
+   print("Captured: " .. renderCaptured(capturedByUser, ownSymbols))
 end
 
 -- ui.lua ======= end
 
--- help.lua ======= 1550
+-- help.lua =======
 
 -- Common help section shared by all three modes (save formats, display modes, symbols, fonts)
 
@@ -1956,7 +2137,7 @@ function showHelpCommon()
    print("")
    echoW("DEFAULT CONFIGURATION can be changed in CONFIG - section at top of LUA script:")
    print("-------------")
-   print("USE_UNICODE_PIECES = true/false")
+   print("DISPLAY_MODE_STEP = 0 (0-7, see 04_ui.lua)")
    print("SHOW_ANNOTATIONS = true/false")
    print("local NODES_SEARCHED = 2000")
    print("local CHALLENGE_ENGINE_NODES = 600")
@@ -2013,7 +2194,6 @@ function showHelpGame()
    print("'h' - Show this help screen")
    print("'?' - Show About screen")
    print("'d' - Toggle display mode")
-   print("    • Letters -> Unicode -> Unicode (inverted).")
    print("'a' - Toggle annotations")
    print("    • show/hide board markers.")
    print("'z' - Undo your last move")
@@ -2039,6 +2219,7 @@ function showHelpGame()
    print("'m' - Show move history")
    print("'r' - Resign current game")
    print("'n' - Start a new game")
+   print("'nb' - Start a new game playing Black")
    print("'u' - Check sunfish.lua for updates")
    print("'m1' - Enter Mate-in-1 puzzle mode")
    print("'cg' - Enter Challenge Game mode")
@@ -2064,7 +2245,7 @@ function showHelpPuzzle()
    print("'s' - Save current puzzle")
    print("'l' - Load saved puzzle")
    print("'n' - Generate a new puzzle")
-   print("'d' - Toggle Unicode / letter display")
+   print("'d' - Toggle display mode")
    print("'a' - Toggle annotations")
    print("'u' - Check sunfish.lua for updates")
    print("'h' - Show this help screen")
@@ -2194,9 +2375,7 @@ end
 
 -- help.lua ======= end
 
--- mate1.lua ======= 1550
-
--- AI puzzle mode ("m1")
+-- mate1.lua =======
 
 emptyBoard =
     '         \n' ..
@@ -2602,7 +2781,7 @@ end
 
 -- mate1.lua ======= end
 
--- challenge.lua ======= 1550
+-- challenge.lua =======
 
 function withQuietExec(fn)
    local realExec = binding.exec
@@ -2771,6 +2950,7 @@ end
 function playChallengeGame(board, startPos, startLastMove, startCapturedByUser,
                                   startCapturedByEngine, startWhiteMoves, startHalfmoveClock,
                                   startGameHistory, startPositionCounts, startMoveHistory, startBlackMoves)
+   clearEngineScore()
    local pos = startPos or Position.new(board, 0, {false,false}, {false,false}, 0, 0)
    local currentStartBoard = board -- starting position used for saves/replay; updated on 'l' load to the loaded code's own start
    local capturedByUser = startCapturedByUser or {}
@@ -2798,6 +2978,7 @@ function playChallengeGame(board, startPos, startLastMove, startCapturedByUser,
    }
    local hintsOn = CHALLENGE_HINTS_ENABLED
    local cachedHints = nil   -- hints table for the CURRENT position, computed once per move
+   local hintsFreshForPos = false   -- true when cachedHints was already computed for the current `pos` (e.g. right after Sunfish's move), so showBoard() shouldn't recompute it
 -- Single-level undo snapshot: full state captured right BEFORE the player's most recent move (pre-move, pre-Sunfish-reply). 'z' restores this and clears it (no re-undo / no redo).
    local undoSnapshot = nil
 
@@ -2822,12 +3003,13 @@ function playChallengeGame(board, startPos, startLastMove, startCapturedByUser,
 
 -- Prints the board using cachedHints (computes it if missing/stale). forceRecompute=true only when the position just changed; the 'd' toggle reuses cachedHints since the position hasn't moved.
    local function showBoard(checkers, guards, isMateNow, forceRecompute)
-      if hintsOn and not isMateNow and (forceRecompute or cachedHints == nil) then
+      if hintsOn and not isMateNow and not hintsFreshForPos and (forceRecompute or cachedHints == nil) then
          echoW("💡 Calculating hint...")
          local avoidMove = findMoveTwoPliesAgo()
          local mv = findHintMove(pos, gameHistory, avoidMove, true)
          cachedHints = buildHintDisplay(mv)
       end
+      hintsFreshForPos = false
       local hints = (hintsOn and not isMateNow) and cachedHints or nil
       printboard(arrayToBoard(pos.board), lastMove, checkers, guards, isMateNow, hints)
    end
@@ -3097,6 +3279,7 @@ function playChallengeGame(board, startPos, startLastMove, startCapturedByUser,
                         echoW("🐠 Sunfish is thinking...")
                         local enginemove, score, reachedDepth, usedNodes, elapsed = search(rotated, CHALLENGE_ENGINE_NODES, gameHistory)
                         assert(score)
+                        setEngineScore(score)
 
                         if enginemove and not isLegalMove(rotated, enginemove) then
                            enginemove = nil
@@ -3131,7 +3314,8 @@ function playChallengeGame(board, startPos, startLastMove, startCapturedByUser,
                            positionCounts[tpKey(pos)] = (positionCounts[tpKey(pos)] or 0) + 1
                            lastMove = {119 - enginemove[1], 119 - enginemove[2]}
                            print("Sunfish ".. (blackMoves + 1) ..". move:")
-print(engineMoveNotation .. " (" .. formatSeconds(elapsed) .. "s) - score: " .. score)
+print(engineMoveNotation .. " (" .. formatSeconds(elapsed) .. "s)")
+print("Captured: " .. renderCaptured(capturedByEngine, opponentSymbols))
                         end
                      end
                   end
@@ -3243,10 +3427,18 @@ print(engineMoveNotation .. " (" .. formatSeconds(elapsed) .. "s) - score: " .. 
          displayGuards[119 - idx] = true
       end
 
+      -- Score display intentionally NOT refreshed here. Doing so used to run a
+      -- SCORE_PEEK_NODES search right after your move, but MTD-bi's inner
+      -- while-loop only checks the node budget BETWEEN depth iterations, not
+      -- inside it - so even maxn=0 still ran a full depth=1 pass (measured at
+      -- ~4700 bound() calls, ~2.4s) before the budget check could ever fire.
+      -- CURRENT_ENGINE_SCORE simply keeps showing Sunfish's last score (from
+      -- before your move) until his real search() call below produces a new one.
+
       if next(displayCheckers) and not isMateNow then
          echoS("Check!")
       end
-      printboard(arrayToBoard(pos:rotate().board), {usermove[1], usermove[2]}, displayCheckers, displayGuards, isMateNow)
+      printboard(arrayToBoard(pos:rotate().board), {usermove[1], usermove[2]}, displayCheckers, displayGuards, isMateNow, nil, true)
 
       if isMateNow then
          echoS("Checkmate in " .. whiteMoves .. " moves!")
@@ -3278,6 +3470,7 @@ print(engineMoveNotation .. " (" .. formatSeconds(elapsed) .. "s) - score: " .. 
       echoW("🐠 Sunfish is thinking...")
       local enginemove, score, reachedDepth, usedNodes, elapsed = search(pos, CHALLENGE_ENGINE_NODES, gameHistory)
       assert(score)
+      setEngineScore(score)
 
       if enginemove and not isLegalMove(pos, enginemove) then
          enginemove = nil
@@ -3315,8 +3508,6 @@ print(engineMoveNotation .. " (" .. formatSeconds(elapsed) .. "s) - score: " .. 
          engineMoveNotation = engineMoveNotation .. enginemove[3]:lower()
       end
       table.insert(moveHistory, {notation = engineMoveNotation, by = "sunfish"})
-      print("Sunfish ".. (blackMoves + 1) ..". move:")
-print(engineMoveNotation .. " (" .. formatSeconds(elapsed) .. "s) - score: " .. score)
       -- IMPORTANT: Sunfish's move must be applied before computing the next position, history, or board display.
       pos = pos:move(enginemove)
       pos.score = 0
@@ -3325,6 +3516,19 @@ print(engineMoveNotation .. " (" .. formatSeconds(elapsed) .. "s) - score: " .. 
       gameHistory[tpKey(pos)] = true
       positionCounts[tpKey(pos)] = (positionCounts[tpKey(pos)] or 0) + 1
       lastMove = {119 - enginemove[1], 119 - enginemove[2]}
+
+-- Hint for the player's upcoming move is computed here (right after Sunfish's own search), so its "Calculating hint..." + depth progress prints before the "Sunfish N. move:" line, and showBoard() at the top of the next loop iteration just reuses cachedHints instead of recomputing.
+      if hintsOn and not (next(findCheckers(pos)) ~= nil and not hasLegalMove(pos)) then
+         echoW("💡 Calculating hint...")
+         local avoidMove = findMoveTwoPliesAgo()
+         local mv = findHintMove(pos, gameHistory, avoidMove, true)
+         cachedHints = buildHintDisplay(mv)
+         hintsFreshForPos = true
+      end
+
+      print("Sunfish ".. (blackMoves) ..". move:")
+print(engineMoveNotation .. " (" .. formatSeconds(elapsed) .. "s)")
+print("Captured: " .. renderCaptured(capturedByEngine, opponentSymbols))
 
       if hasInsufficientMaterial(pos.board) then
          printboard(arrayToBoard(pos.board), lastMove, {}, {})
@@ -3387,13 +3591,28 @@ end
 
 -- challenge.lua ======= end
 
--- main.lua ======= 0615
+-- main.lua =======
 
-function main()
+-- Node budget for the quiet peek-search run right after the player's own move (both normal games and Challenge mode), just to refresh the displayed Score line before Sunfish replies. Kept small since it's a display-only lookup.
+SCORE_PEEK_NODES = 300
+
+-- playAsBlack: when true (from 'nb'), the human plays Black - board is shown/entered
+-- from Black's side (see PLAYER_IS_BLACK in ui.lua) and Sunfish, playing White, moves first.
+function main(playAsBlack, showHeader)
    updateDisplayMode()
+   clearEngineScore()
+   PLAYER_IS_BLACK = playAsBlack or false
    local pos = Position.new(initial, 0, {true,true}, {true,true}, 0, 0)
+   if PLAYER_IS_BLACK then
+      pos = pos:rotate() -- user's (Black) pieces become uppercase/bottom-of-array, matching what the rest of the engine expects of "the user's side"
+   end
 -- Board this game started from (standard, unless a custom/puzzle position is loaded via 'l' before any moves). Saved with the game code so rebuildHistoryFromMoves() replays from the real start instead of always assuming `initial`.
-   local startingBoard = initial
+-- Kept in the true/physical FEN-like layout (matching `initial`'s own
+-- layout and rebuildHistoryFromMoves()'s White-view replay), not the
+-- rotated internal `pos.board` form - correct the King/Queen swap that a
+-- Black-playing user's initial rotate() introduces (see
+-- correctKingQueenParity()'s note in ui.lua).
+   local startingBoard = correctKingQueenParity(arrayToBoard(pos.board), PLAYER_IS_BLACK and 1 or 0)
    local capturedByUser = {}
    local capturedByEngine = {}
    local lastMove = nil
@@ -3425,10 +3644,69 @@ function main()
 -- Single-level undo snapshot: full state captured right BEFORE your most recent move (pre-move, pre-Sunfish-reply). 'z' restores this and clears it (no re-undo / no redo).
    local undoSnapshot = nil
 
-   print("")
-   echoW("=== sunfish.lua ===")
-   print("• 'h' for help")
-   print("• 'q' to quit.")
+   if showHeader ~= false then
+      print("")
+      echoW("=== sunfish.lua ===")
+      print("• 'h' for help")
+      print("• 'q' to quit.")
+   end
+
+   if PLAYER_IS_BLACK then
+-- Show the initial board first, before announcing that Sunfish is thinking.
+      printboard(arrayToBoard(pos.board), lastMove, {}, {})
+      echoW("🐠 Sunfish is thinking...")
+      -- Rotate for engine, but store the move in ABSOLUTE coordinates
+      local rotated = pos:rotate()
+      local enginemove, score, reachedDepth, usedNodes, elapsed = search(rotated, NODES_SEARCHED, gameHistory)
+      setEngineScore(score)
+      if PROFILE_PRINT_ENABLED then
+         printProfile(elapsed, reachedDepth, usedNodes)
+      end
+      if enginemove and not isLegalMove(rotated, enginemove) then
+         enginemove = nil
+      end
+      if not enginemove then
+         local legal = legalMovesOf(rotated)
+         if #legal > 0 then
+            table.sort(legal, function(a, b) return rotated:value(a) > rotated:value(b) end)
+            enginemove = legal[1]
+         end
+      end
+      if enginemove then
+         local engineCap = capturedAt(rotated, enginemove)
+         local enginePawnMove = isPawnMove(rotated, enginemove)
+         if engineCap or enginePawnMove then
+            halfmoveClock = 0
+         else
+            halfmoveClock = halfmoveClock + 1
+         end
+         if engineCap then table.insert(capturedByEngine, engineCap) end
+-- render() expects the position expressed the way the user's OWN move
+-- coordinates are (see parse(): it flips fil/rank for PLAYER_IS_BLACK).
+-- enginemove is in `rotated`'s absolute/White-view system, so it needs
+-- the 119-x complement before render() - same complement pos.board keeps
+-- using afterwards, so lastMove/highlight get the identical value.
+         local notFrom = 119 - enginemove[1]
+         local notTo = 119 - enginemove[2]
+         local engineMoveNotation = render(notFrom) .. render(notTo)
+         if enginemove[3] and enginemove[3] ~= '' and enginemove[3] ~= 'Q' then
+            engineMoveNotation = engineMoveNotation .. enginemove[3]:lower()
+         end
+         print("Sunfish 1. move: \n" .. engineMoveNotation .. " (" .. formatSeconds(elapsed) .. "s)")
+         print("Captured: " .. renderCaptured(capturedByEngine, opponentSymbols))
+         table.insert(moveHistory, {notation = engineMoveNotation, by = "sunfish"})
+         pos = rotated:move(enginemove)
+         pos.score = 0
+         gameHistory[tpKey(pos)] = true
+         positionCounts[tpKey(pos)] = (positionCounts[tpKey(pos)] or 0) + 1
+         -- lastMove/highlight use the same 119-x coordinates as the notation above
+         lastMove = {notFrom, notTo}
+         moveSnapshots[0].pos = pos
+         moveSnapshots[0].lastMove = lastMove
+         moveSnapshots[0].capturedByEngine = {table.unpack(capturedByEngine)}
+         moveSnapshots[0].moveHistory = {table.unpack(moveHistory)}
+      end
+   end
 
    while true do
       local checkers = findCheckers(pos)
@@ -3437,7 +3715,7 @@ function main()
          echoS("Check!")
       end
       printboard(arrayToBoard(pos.board), lastMove, checkers, guards)
-print("Captured: " .. renderCaptured(capturedByUser, blackSymbols))
+print("Captured: " .. renderCaptured(capturedByUser, ownSymbols))
 
             local usermove = nil
 while true do
@@ -3575,10 +3853,17 @@ while true do
    print("Paste game code:")
    local code = input()
    if code and code ~= '' then
+      local wasPlayerBlack = PLAYER_IS_BLACK
       local result = {loadGame(code)}
       if result[1] then
          if result[11] == "cg" then
             echoW("Note: this code was saved from Challenge Game (type 'cg' then 'l' there to resume with hints).")
+         end
+-- loadGame() already set PLAYER_IS_BLACK (and rotated pos accordingly) from
+-- the code's saved side, if present; just let the player know if it flipped
+-- board orientation from how this session started.
+         if PLAYER_IS_BLACK ~= wasPlayerBlack then
+            echoW("Loaded game was saved playing " .. (PLAYER_IS_BLACK and "Black" or "White") .. " - switching board orientation.")
          end
          pos = result[1]
          lastMove = result[2]
@@ -3596,7 +3881,7 @@ while true do
          if result[10] then
             startingBoard = result[10]
          elseif not histStr or histStr == '-' or histStr == '' then
-            startingBoard = arrayToBoard(pos.board)
+            startingBoard = correctKingQueenParity(arrayToBoard(pos.board), (PLAYER_IS_BLACK and 1 or 0) + whiteMoves + blackMoves)
          end
 
 -- Rebuilds gameHistory/positionCounts by replaying the saved move list from the real starting position (not always `initial`), for correct threefold repetition across save/load (falls back to seeding just the loaded position if histStr is missing/unparseable).
@@ -3638,7 +3923,7 @@ while true do
             if lastMove then
    echoW("Loaded position (after your move):")
    print("Your move: \n" .. render(lastMove[1]) .. render(lastMove[2]))
-   print("Captured: " .. renderCaptured(capturedByUser, blackSymbols))
+   print("Captured: " .. renderCaptured(capturedByUser, ownSymbols))
                local checkersAfterYourMove = findCheckers(pos)
                local guardsAfterYourMove = findKingGuards(pos, checkersAfterYourMove)
                if next(checkersAfterYourMove) then
@@ -3651,6 +3936,7 @@ while true do
             echoW("🐠 Sunfish is thinking...")
 enginemove, score, reachedDepth, usedNodes, elapsed = search(rotated, NODES_SEARCHED, gameHistory)
 assert(score)
+            setEngineScore(score)
             if PROFILE_PRINT_ENABLED then
                printProfile(elapsed, reachedDepth, usedNodes)
             end
@@ -3673,19 +3959,24 @@ assert(score)
                   halfmoveClock = halfmoveClock + 1
                end
                if engineCap then table.insert(capturedByEngine, engineCap) end
-               local engineMoveNotation = render(119-enginemove[0 + __1]) .. render(119-enginemove[1 + __1])
+               -- Same convention as the very first Sunfish move: enginemove
+               -- is in rotated's absolute/White-view system, so both
+               -- render() and lastMove/highlight need the 119-x complement.
+               local notFrom = 119 - enginemove[1]
+               local notTo = 119 - enginemove[2]
+               local engineMoveNotation = render(notFrom) .. render(notTo)
                if enginemove[3] and enginemove[3] ~= '' and enginemove[3] ~= 'Q' then
                   engineMoveNotation = engineMoveNotation .. enginemove[3]:lower()
                end
-               print("Sunfish " .. (blackMoves + 1) .. ". move: \n" .. engineMoveNotation .. " (" .. formatSeconds(elapsed) .. "s) - score: " .. score)
-               print("Captured: " .. renderCaptured(capturedByEngine, whiteSymbols))
+               print("Sunfish " .. (blackMoves + 1) .. ". move: \n" .. engineMoveNotation .. " (" .. formatSeconds(elapsed) .. "s)")
+               print("Captured: " .. renderCaptured(capturedByEngine, opponentSymbols))
                table.insert(moveHistory, {notation = engineMoveNotation, by = "sunfish"})
                pos = rotated:move(enginemove)
                blackMoves = blackMoves + 1
                pos.score = 0
                gameHistory[tpKey(pos)] = true
                positionCounts[tpKey(pos)] = (positionCounts[tpKey(pos)] or 0) + 1
-               lastMove = {119 - enginemove[1], 119 - enginemove[2]}
+               lastMove = {notFrom, notTo}
             else
                echoW("Sunfish has no legal move (checkmate or stalemate).")
             end
@@ -3693,7 +3984,7 @@ assert(score)
 
          if lastMove and nextToMove ~= "b" then
             print("Sunfish " .. blackMoves .. ". move: \n" .. render(lastMove[1]) .. render(lastMove[2]))
-            print("Captured: " .. renderCaptured(capturedByEngine, whiteSymbols))
+            print("Captured: " .. renderCaptured(capturedByEngine, opponentSymbols))
          end
 
          local checkers = findCheckers(pos)
@@ -3703,7 +3994,7 @@ assert(score)
             echoS("Check!")
          end
          printboard(arrayToBoard(pos.board), lastMove, checkers, guards, loadedMate)
-print("Captured: " .. renderCaptured(capturedByUser, blackSymbols))
+print("Captured: " .. renderCaptured(capturedByUser, ownSymbols))
 -- A loaded code can itself be a finished position (mate/stalemate) if saved/edited that way; check before handing control back to the player, or the game would sit waiting for an impossible move.
          if loadedMate then
             echoE("Checkmate!")
@@ -3726,7 +4017,13 @@ print("Captured: " .. renderCaptured(capturedByUser, blackSymbols))
    elseif crdn == 'n' then
        print("----")
       echoW("Starting new game...")
-      return main()
+      echoW("You are playing White.")
+      return main(false, false)
+   elseif crdn == 'nb' then
+       print("----")
+      echoW("Starting new game...")
+      echoW("You are playing Black.")
+      return main(true, false)
    elseif crdn == 'h' then
        print("----")
       showHelpGame()
@@ -3749,6 +4046,7 @@ print("Captured: " .. renderCaptured(capturedByUser, blackSymbols))
       echoW("Resuming the game.")
       displayPosition(pos, lastMove, capturedByUser, capturedByEngine, blackMoves)
    else
+      -- Parse user move in absolute coordinates
       usermove = {parse(crdn:sub(1,2)), parse(crdn:sub(3,4))}
       local from = usermove[1]
       if not (from and usermove[2]) then
@@ -3818,9 +4116,10 @@ pos.score = 0
 gameHistory[tpKey(pos)] = true
 positionCounts[tpKey(pos)] = (positionCounts[tpKey(pos)] or 0) + 1
 
--- Snapshot for 's<N>'; pos is in Black's rotated view here, so store the White-view rotation to match saveGame()/loadGame().
+-- Snapshot stores the actual current Position. saveGame() normalizes its
+-- orientation from PLAYER_IS_BLACK + the snapshot's real ply history.
       moveSnapshots[whiteMoves] = {
-         pos = pos:rotate(),
+         pos = pos,
          lastMove = {usermove[1], usermove[2]},
          capturedByUser = {table.unpack(capturedByUser)},
          capturedByEngine = {table.unpack(capturedByEngine)},
@@ -3845,11 +4144,19 @@ for idx in pairs(guardsAfterUser) do
    displayGuards[119 - idx] = true
 end
 
+-- Score display intentionally NOT refreshed here. Doing so used to run a
+-- SCORE_PEEK_NODES search right after your move, but MTD-bi's inner
+-- while-loop only checks the node budget BETWEEN depth iterations, not
+-- inside it - so even maxn=0 still ran a full depth=1 pass (measured at
+-- ~4700 bound() calls, ~2.4s) before the budget check could ever fire.
+-- CURRENT_ENGINE_SCORE simply keeps showing Sunfish's last score (from
+-- before your move) until his real search() call below produces a new one.
+
 -- Print "Check!" only if not mate
 if next(displayCheckers) and not isMateNow then
    echoS("Check!")
 end
-printboard(arrayToBoard(pos:rotate().board), {usermove[1], usermove[2]}, displayCheckers, displayGuards, isMateNow)
+printboard(arrayToBoard(pos:rotate().board), {usermove[1], usermove[2]}, displayCheckers, displayGuards, isMateNow, nil, true)
 
 if isMateNow then
    echoS("Checkmate in " .. whiteMoves .. " moves for White!")
@@ -3875,6 +4182,7 @@ end
       echoW("🐠 Sunfish is thinking...")
 enginemove, score, reachedDepth, usedNodes, elapsed = search(pos, NODES_SEARCHED, gameHistory)
 assert(score)
+      setEngineScore(score)
       if PROFILE_PRINT_ENABLED then
          printProfile(elapsed, reachedDepth, usedNodes)
       end
@@ -3913,20 +4221,27 @@ assert(score)
       end
       if engineCap then table.insert(capturedByEngine, engineCap) end
 
-      local engineMoveNotation = render(119-enginemove[0 + __1]) .. render(119-enginemove[1 + __1])
+      -- pos here (before this move) is in absolute White-view coordinates
+      -- (each move() rotation cancels out in pairs over a full round), same
+      -- as the very first Sunfish move above - render() needs the 119-x
+      -- complement, and so does lastMove/highlight once pos.board rotates
+      -- back to the user's (Black) view after this move is applied.
+      local notFrom = 119 - enginemove[1]
+      local notTo = 119 - enginemove[2]
+      local engineMoveNotation = render(notFrom) .. render(notTo)
       if enginemove[3] and enginemove[3] ~= '' and enginemove[3] ~= 'Q' then
          engineMoveNotation = engineMoveNotation .. enginemove[3]:lower()
       end
 print("Sunfish ".. (blackMoves + 1) ..". move:")
-print(engineMoveNotation .. " (" .. formatSeconds(elapsed) .. "s) - score: " .. score)
-print("Captured: " .. renderCaptured(capturedByEngine, whiteSymbols))
+print(engineMoveNotation .. " (" .. formatSeconds(elapsed) .. "s)")
+print("Captured: " .. renderCaptured(capturedByEngine, opponentSymbols))
 table.insert(moveHistory, {notation = engineMoveNotation, by = "sunfish"})
 pos = pos:move(enginemove)
 blackMoves = blackMoves + 1
 pos.score = 0  -- CRITICAL!
 gameHistory[tpKey(pos)] = true
 positionCounts[tpKey(pos)] = (positionCounts[tpKey(pos)] or 0) + 1
-      lastMove = {119 - enginemove[1], 119 - enginemove[2]}
+      lastMove = {notFrom, notTo}
 
       if hasInsufficientMaterial(pos.board) then
          printboard(arrayToBoard(pos.board), lastMove, {}, {})
