@@ -655,7 +655,7 @@ print("Captured: " .. renderCaptured(capturedByEngine, opponentSymbols))
       if next(displayCheckers) and not isMateNow then
          echoS("Check!")
       end
-      printboard(arrayToBoard(pos:rotate().board), {usermove[1], usermove[2]}, displayCheckers, displayGuards, isMateNow)
+      printboard(arrayToBoard(pos:rotate().board), {usermove[1], usermove[2]}, displayCheckers, displayGuards, isMateNow, nil, true)
 
       if isMateNow then
          echoS("Checkmate in " .. whiteMoves .. " moves!")

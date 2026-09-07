@@ -1,5 +1,8 @@
 -- main.lua =======
 
+-- Node budget for the quiet peek-search run right after the player's own move (both normal games and Challenge mode), just to refresh the displayed Score line before Sunfish replies. Kept small since it's a display-only lookup.
+SCORE_PEEK_NODES = 300
+
 -- playAsBlack: when true (from 'nb'), the human plays Black - board is shown/entered
 -- from Black's side (see PLAYER_IS_BLACK in ui.lua) and Sunfish, playing White, moves first.
 function main(playAsBlack, showHeader)
@@ -560,7 +563,7 @@ end
 if next(displayCheckers) and not isMateNow then
    echoS("Check!")
 end
-printboard(arrayToBoard(pos:rotate().board), {usermove[1], usermove[2]}, displayCheckers, displayGuards, isMateNow)
+printboard(arrayToBoard(pos:rotate().board), {usermove[1], usermove[2]}, displayCheckers, displayGuards, isMateNow, nil, true)
 
 if isMateNow then
    echoS("Checkmate in " .. whiteMoves .. " moves for White!")
