@@ -59,7 +59,7 @@ print("Loading sunfish.lua...")
 -- so checkForUpdate() (in core.lua) can just read it instead of fetching it again.
 MANIFEST_CONTENT = fetchURL(BASE_URL .. MANIFEST_NAME)
 if not MANIFEST_CONTENT or MANIFEST_CONTENT == '' then
-   echoErr("Failed to download " .. MANIFEST_NAME .. ". Check your connection and try again.")
+   print("Failed to download " .. MANIFEST_NAME .. ". Check your connection and try again.")
    return
 end
 
@@ -69,13 +69,13 @@ for _, partName in ipairs(PARTS) do
    local content = fetchURL(BASE_URL .. partName)
 
    if not content or content == '' then
-      echoErr("Failed to download " .. partName .. ". Check your connection and try again.")
+      print("Failed to download " .. partName .. ". Check your connection and try again.")
       return
    end
 
    local chunk, err = load(content, partName)
    if not chunk then
-      echoErr("Syntax error in " .. partName .. ": " .. tostring(err))
+      print("Syntax error in " .. partName .. ": " .. tostring(err))
       return
    end
    chunks[#chunks + 1] = {name = partName, chunk = chunk}
@@ -85,7 +85,7 @@ end
 for _, part in ipairs(chunks) do
    local ok, err = pcall(part.chunk)
    if not ok then
-      echoErr("Error running " .. part.name .. ": " .. tostring(err))
+      print("Error running " .. part.name .. ": " .. tostring(err))
       return
    end
 end
