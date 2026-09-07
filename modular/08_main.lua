@@ -103,6 +103,7 @@ function main(playAsBlack, showHeader)
          print("Captured: " .. renderCaptured(capturedByEngine, opponentSymbols))
          table.insert(moveHistory, {notation = engineMoveNotation, by = "sunfish"})
          pos = rotated:move(enginemove)
+         blackMoves = 1
          pos.score = 0
          gameHistory[tpKey(pos)] = true
          positionCounts[tpKey(pos)] = (positionCounts[tpKey(pos)] or 0) + 1
@@ -112,6 +113,7 @@ function main(playAsBlack, showHeader)
          moveSnapshots[0].lastMove = lastMove
          moveSnapshots[0].capturedByEngine = {table.unpack(capturedByEngine)}
          moveSnapshots[0].moveHistory = {table.unpack(moveHistory)}
+         moveSnapshots[0].blackMoves = blackMoves
       end
    end
 
