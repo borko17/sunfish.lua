@@ -7,7 +7,7 @@ CHANGELOG = {
    "'d' now cycles through eight display modes, instead of three.",
    "Moved score display to the top of the board with color-coded player/Sunfish advantage.",
    "Removed score from Sunfish move output.",
-   "Fixed nb mode move numbering: Sunfish's 2nd move showed as "1. move".
+   "Fixed nb mode move numbering: Sunfish's 2nd move showed as '1. move'",
 }
 
 -- manifest.txt ======= end
