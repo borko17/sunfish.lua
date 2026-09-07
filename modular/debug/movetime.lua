@@ -151,11 +151,12 @@ end
 
 local function printStepProfile()
    print(string.format(
-      "[steps] \nPosition:move: %.2fs/%d \nfindCheckers: %.2fs/%d \nhasLegalMove: %.2fs/%d \nprintboard: %.2fs/%d \ninput (waiting on you): %.2fs/%d",
+      "[steps] \nPosition:move: %.2fs/%d \nfindCheckers: %.2fs/%d \nhasLegalMove: %.2fs/%d \nprintboard: %.2fs/%d \npeek search (score refresh): %.2fs/%d \ninput (waiting on you): %.2fs/%d",
       round2(STEP_move_time), STEP_move_calls,
       round2(STEP_findCheckers_time), STEP_findCheckers_calls,
       round2(STEP_hasLegalMove_time), STEP_hasLegalMove_calls,
       round2(STEP_printboard_time), STEP_printboard_calls,
+      round2(STEP_peek_time), STEP_peek_calls,
       round2(STEP_input_time), STEP_input_calls
    ))
    STEP_move_time = 0
@@ -166,6 +167,8 @@ local function printStepProfile()
    STEP_hasLegalMove_calls = 0
    STEP_printboard_time = 0
    STEP_printboard_calls = 0
+   STEP_peek_time = 0
+   STEP_peek_calls = 0
    local inputTime = STEP_input_time
    STEP_input_time = 0
    STEP_input_calls = 0
@@ -182,9 +185,20 @@ end
 local realSearch = search
 local betweenSearchesStart = os.clock() -- first call also measures from script load
 
+-- Tracks time spent in the SCORE_PEEK_NODES probe itself (the quiet
+-- withQuietExec()-wrapped search that refreshes the displayed score right
+-- after your move), separate from genMoves/move/tp so we can see whether
+-- its cost is proportional to its node budget or mostly fixed overhead.
+STEP_peek_time = 0
+STEP_peek_calls = 0
+
 function search(pos, maxn, history)
    if maxn == SCORE_PEEK_NODES then
-      return realSearch(pos, maxn, history)
+      local t0 = os.clock()
+      local result = {realSearch(pos, maxn, history)}
+      STEP_peek_time = STEP_peek_time + (os.clock() - t0)
+      STEP_peek_calls = STEP_peek_calls + 1
+      return table.unpack(result)
    end
 
    local elapsed = os.clock() - betweenSearchesStart
