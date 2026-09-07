@@ -1,8 +1,5 @@
 -- main.lua =======
 
--- Node budget for the quiet peek-search run right after the player's own move (both normal games and Challenge mode), just to refresh the displayed Score line before Sunfish replies. Kept small since it's a display-only lookup.
-SCORE_PEEK_NODES = 300
-
 -- playAsBlack: when true (from 'nb'), the human plays Black - board is shown/entered
 -- from Black's side (see PLAYER_IS_BLACK in ui.lua) and Sunfish, playing White, moves first.
 function main(playAsBlack, showHeader)
@@ -336,7 +333,7 @@ while true do
                if next(checkersAfterYourMove) then
                   echoS("Check!")
                end
-               printboard(arrayToBoard(pos.board), lastMove, checkersAfterYourMove, guardsAfterYourMove)
+               printboard(arrayToBoard(pos.board), lastMove, checkersAfterYourMove, guardsAfterYourMove, false, nil, true)
             end
             local rotated = pos:rotate()
             print("")
@@ -550,14 +547,6 @@ end
 for idx in pairs(guardsAfterUser) do
    displayGuards[119 - idx] = true
 end
-
--- Score display intentionally NOT refreshed here. Doing so used to run a
--- SCORE_PEEK_NODES search right after your move, but MTD-bi's inner
--- while-loop only checks the node budget BETWEEN depth iterations, not
--- inside it - so even maxn=0 still ran a full depth=1 pass (measured at
--- ~4700 bound() calls, ~2.4s) before the budget check could ever fire.
--- CURRENT_ENGINE_SCORE simply keeps showing Sunfish's last score (from
--- before your move) until his real search() call below produces a new one.
 
 -- Print "Check!" only if not mate
 if next(displayCheckers) and not isMateNow then

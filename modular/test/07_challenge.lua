@@ -644,14 +644,6 @@ print("Captured: " .. renderCaptured(capturedByEngine, opponentSymbols))
          displayGuards[119 - idx] = true
       end
 
-      -- Score display intentionally NOT refreshed here. Doing so used to run a
-      -- SCORE_PEEK_NODES search right after your move, but MTD-bi's inner
-      -- while-loop only checks the node budget BETWEEN depth iterations, not
-      -- inside it - so even maxn=0 still ran a full depth=1 pass (measured at
-      -- ~4700 bound() calls, ~2.4s) before the budget check could ever fire.
-      -- CURRENT_ENGINE_SCORE simply keeps showing Sunfish's last score (from
-      -- before your move) until his real search() call below produces a new one.
-
       if next(displayCheckers) and not isMateNow then
          echoS("Check!")
       end
