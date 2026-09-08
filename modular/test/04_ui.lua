@@ -162,11 +162,12 @@ end
 -- The indicator symbol always sits at the tick-th inner cell counting from
 -- the LEFT, regardless of who is ahead - only the border's color (green for
 -- you, red for Sunfish) shows who has the advantage. Corners (+ or the
--- unicode corner glyphs) are never overwritten by the indicator.
+-- unicode corner glyphs) are never overwritten by the indicator. The border
+-- keeps the same indent as the rest of the board (bottom border, ranks) so
+-- the left + always lines up with the | below it, colored or not.
 local SCORE_TICK_SYMBOL = '\xe2\x88\x86' -- ∆
 local INNER_WIDTH = 26 -- must match string.rep(..., 26) used for the border body
-local NORMAL_LEAD_SPACES = "  " -- indent used when the border is uncolored (score 0/unknown)
-local SCORE_LEAD_SPACES = "    " -- indent used when the border is colored (score indicator shown) - 2 extra vs normal
+local BORDER_LEAD_SPACES = "  " -- indent before the border - matches bottomBorder/sideBorder alignment
 
 local function scoreTickCount(score)
    local mag = math.abs(score)
@@ -179,13 +180,12 @@ end
 local function buildTopBorderLine(unicodeMode)
    local score = CURRENT_ENGINE_SCORE
    local hasIndicator = score ~= nil and score ~= 0
-   local leadSpaces = hasIndicator and SCORE_LEAD_SPACES or NORMAL_LEAD_SPACES
 
    local leftCap, fill, rightCap
    if unicodeMode then
-      leftCap, fill, rightCap = leadSpaces .. "\xe2\x95\x94", '\xe2\x95\x90', "\xe2\x95\x97"
+      leftCap, fill, rightCap = BORDER_LEAD_SPACES .. "\xe2\x95\x94", '\xe2\x95\x90', "\xe2\x95\x97"
    else
-      leftCap, fill, rightCap = leadSpaces .. "+", "-", "+"
+      leftCap, fill, rightCap = BORDER_LEAD_SPACES .. "+", "-", "+"
    end
 
    local cells = {}
