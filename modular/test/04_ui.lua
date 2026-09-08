@@ -168,6 +168,13 @@ end
 local SCORE_TICK_SYMBOL = '\xe2\x88\x86' -- ∆
 local INNER_WIDTH = 26 -- must match string.rep(..., 26) used for the border body
 local BORDER_LEAD_SPACES = "  " -- indent before the border - matches bottomBorder/sideBorder alignment
+-- echoS/echoE route through binding.exec("echo -X " .. msg), which strips
+-- leading whitespace before printing (unlike plain print()). A regular
+-- space here would vanish and the colored border would print flush-left,
+-- breaking alignment with the rest of the board. U+00A0 (non-breaking
+-- space) renders identically in a monospace terminal but isn't touched by
+-- that trim, so it survives the round trip.
+local BORDER_LEAD_SPACES_COLORED = "\xc2\xa0\xc2\xa0" -- two non-breaking spaces
 
 local function scoreTickCount(score)
    local mag = math.abs(score)
@@ -180,12 +187,13 @@ end
 local function buildTopBorderLine(unicodeMode)
    local score = CURRENT_ENGINE_SCORE
    local hasIndicator = score ~= nil and score ~= 0
+   local lead = hasIndicator and BORDER_LEAD_SPACES_COLORED or BORDER_LEAD_SPACES
 
    local leftCap, fill, rightCap
    if unicodeMode then
-      leftCap, fill, rightCap = BORDER_LEAD_SPACES .. "\xe2\x95\x94", '\xe2\x95\x90', "\xe2\x95\x97"
+      leftCap, fill, rightCap = lead .. "\xe2\x95\x94", '\xe2\x95\x90', "\xe2\x95\x97"
    else
-      leftCap, fill, rightCap = BORDER_LEAD_SPACES .. "+", "-", "+"
+      leftCap, fill, rightCap = lead .. "+", "-", "+"
    end
 
    local cells = {}
