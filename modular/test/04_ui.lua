@@ -159,13 +159,14 @@ end
 -- case so the indicator always shows even under 100), 100-199 -> 1 tick,
 -- 200-299 -> 2 ticks, 300-399 -> 3 ticks, etc.
 -- (i.e. tick count = max(1, floor(|score|/100)), capped to the inner width).
--- The indicator symbol sits at the tick-th inner cell from the side that
--- owns the advantage: from the left (your side) when you're ahead, from
--- the right (Sunfish's side) when Sunfish is ahead. Corners (+ or the
+-- The indicator symbol always sits at the tick-th inner cell counting from
+-- the LEFT, regardless of who is ahead - only the border's color (green for
+-- you, red for Sunfish) shows who has the advantage. Corners (+ or the
 -- unicode corner glyphs) are never overwritten by the indicator.
 local SCORE_TICK_SYMBOL = '\xe2\x88\x86' -- ∆
 local INNER_WIDTH = 26 -- must match string.rep(..., 26) used for the border body
-local BORDER_LEAD_SPACES = "    " -- left-hand indent before the border (2 extra vs before)
+local NORMAL_LEAD_SPACES = "  " -- indent used when the border is uncolored (score 0/unknown)
+local SCORE_LEAD_SPACES = "    " -- indent used when the border is colored (score indicator shown) - 2 extra vs normal
 
 local function scoreTickCount(score)
    local mag = math.abs(score)
@@ -176,11 +177,15 @@ local function scoreTickCount(score)
 end
 
 local function buildTopBorderLine(unicodeMode)
+   local score = CURRENT_ENGINE_SCORE
+   local hasIndicator = score ~= nil and score ~= 0
+   local leadSpaces = hasIndicator and SCORE_LEAD_SPACES or NORMAL_LEAD_SPACES
+
    local leftCap, fill, rightCap
    if unicodeMode then
-      leftCap, fill, rightCap = BORDER_LEAD_SPACES .. "\xe2\x95\x94", '\xe2\x95\x90', "\xe2\x95\x97"
+      leftCap, fill, rightCap = leadSpaces .. "\xe2\x95\x94", '\xe2\x95\x90', "\xe2\x95\x97"
    else
-      leftCap, fill, rightCap = BORDER_LEAD_SPACES .. "+", "-", "+"
+      leftCap, fill, rightCap = leadSpaces .. "+", "-", "+"
    end
 
    local cells = {}
@@ -188,19 +193,12 @@ local function buildTopBorderLine(unicodeMode)
       cells[#cells + 1] = fill
    end
 
-   local score = CURRENT_ENGINE_SCORE
    local colorFn = nil
-   if score ~= nil and score ~= 0 then
+   if hasIndicator then
       local ticks = scoreTickCount(score)
-      if score < 0 then
-         -- You're ahead: fill from the left, indicator marks the rightmost tick.
-         cells[ticks] = SCORE_TICK_SYMBOL
-         colorFn = echoS
-      else
-         -- Sunfish is ahead: fill from the right, indicator marks the leftmost tick.
-         cells[INNER_WIDTH - ticks + 1] = SCORE_TICK_SYMBOL
-         colorFn = echoE
-      end
+      -- Indicator always counts from the left; color alone signals who's ahead.
+      cells[ticks] = SCORE_TICK_SYMBOL
+      colorFn = (score < 0) and echoS or echoE
    end
 
    local line = leftCap .. table.concat(cells) .. rightCap
