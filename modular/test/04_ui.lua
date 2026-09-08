@@ -165,7 +165,7 @@ end
 -- unicode corner glyphs) are never overwritten by the indicator. The border
 -- keeps the same indent as the rest of the board (bottom border, ranks) so
 -- the left + always lines up with the | below it, colored or not.
-local SCORE_TICK_SYMBOL = '\xe2\x88\x86' -- ∆
+local SCORE_TICK_SYMBOL = '#' -- ∆
 local INNER_WIDTH = 26 -- must match string.rep(..., 26) used for the border body
 local BORDER_LEAD_SPACES = "  " -- indent before the border - matches bottomBorder/sideBorder alignment
 -- echoS/echoE route through binding.exec("echo -X " .. msg), which strips
