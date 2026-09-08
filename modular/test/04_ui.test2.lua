@@ -154,10 +154,10 @@ function printEngineScore()
    end
 end
 
--- Builds the top border of the board with a score indicator embedded in it.
--- Each 100 points of |score| earns one tick mark: 1-99 -> 1 tick (special
--- case so the indicator always shows even under 100), 100-199 -> 1 tick,
--- 200-299 -> 2 ticks, 300-399 -> 3 ticks, etc.
+-- Builds a border line (top or bottom) with a score indicator embedded in
+-- it. Each 100 points of |score| earns one tick mark: 1-99 -> 1 tick
+-- (special case so the indicator always shows even under 100), 100-199 ->
+-- 1 tick, 200-299 -> 2 ticks, 300-399 -> 3 ticks, etc.
 -- (i.e. tick count = max(1, floor(|score|/100)), capped to the inner width).
 -- The indicator symbol always sits at the tick-th inner cell counting from
 -- the LEFT, regardless of who is ahead - only the border's color (green for
@@ -165,7 +165,7 @@ end
 -- unicode corner glyphs) are never overwritten by the indicator. The border
 -- keeps the same indent as the rest of the board (bottom border, ranks) so
 -- the left + always lines up with the | below it, colored or not.
-local SCORE_TICK_SYMBOL = '\xe2\x88\x86' -- ∆
+local SCORE_TICK_SYMBOL = "#"
 local INNER_WIDTH = 26 -- must match string.rep(..., 26) used for the border body
 local BORDER_LEAD_SPACES = "  " -- indent before the border - matches bottomBorder/sideBorder alignment
 -- echoS/echoE route through binding.exec("echo -X " .. msg), which strips
@@ -186,14 +186,20 @@ local function scoreTickCount(score)
    return ticks
 end
 
-local function buildTopBorderLine(unicodeMode)
+-- corner: "top" uses +/╔╗ style corners, "bottom" uses +/╚╝ style corners.
+local function buildScoreBorderLine(unicodeMode, corner)
    local score = CURRENT_ENGINE_SCORE
    local hasIndicator = score ~= nil and score ~= 0
    local lead = hasIndicator and BORDER_LEAD_SPACES_COLORED or BORDER_LEAD_SPACES
 
    local leftCap, fill, rightCap
    if unicodeMode then
-      leftCap, fill, rightCap = lead .. "\xe2\x95\x94", '\xe2\x95\x90', "\xe2\x95\x97"
+      local horiz = '\xe2\x95\x90'  -- ═
+      if corner == "top" then
+         leftCap, fill, rightCap = lead .. "\xe2\x95\x94", horiz, "\xe2\x95\x97"  -- ╔ ═ ╗
+      else
+         leftCap, fill, rightCap = lead .. "\xe2\x95\x9a", horiz, "\xe2\x95\x9d"  -- ╚ ═ ╝
+      end
    else
       leftCap, fill, rightCap = lead .. "+", "-", "+"
    end
@@ -226,16 +232,15 @@ function printboard(board, lastMove, checkers, guards, isMate, hints, skipScore)
    end
 
    print("")
-   local topBorder, sideBorder, bottomBorder, topBorderColorFn
+   local topBorder, sideBorder, bottomBorder, topBorderColorFn, bottomBorderColorFn
    if usingUnicodePieces() then
-      local horiz = '\xe2\x95\x90'  -- ═
-      topBorder, topBorderColorFn = buildTopBorderLine(true)
-      sideBorder   = '\xe2\x95\x91'                                               -- ║
-      bottomBorder = "  \xe2\x95\x9a" .. string.rep(horiz, 26) .. "\xe2\x95\x9d"  -- ╚ ... ╝
+      topBorder, topBorderColorFn = buildScoreBorderLine(true, "top")
+      sideBorder = '\xe2\x95\x91'  -- ║
+      bottomBorder, bottomBorderColorFn = buildScoreBorderLine(true, "bottom")
    else
-      topBorder, topBorderColorFn = buildTopBorderLine(false)
+      topBorder, topBorderColorFn = buildScoreBorderLine(false, "top")
       sideBorder = "|"
-      bottomBorder = "  +" .. string.rep("-", 26) .. "+"
+      bottomBorder, bottomBorderColorFn = buildScoreBorderLine(false, "bottom")
    end
 
    if topBorderColorFn then
@@ -329,7 +334,11 @@ end
       table.insert(line, sideBorder)
       print(table.concat(line))
    end
-   print(bottomBorder)
+   if bottomBorderColorFn then
+      bottomBorderColorFn(bottomBorder)
+   else
+      print(bottomBorder)
+   end
    if PLAYER_IS_BLACK then
       print("     h  g  f  e  d  c  b  a")
    else
