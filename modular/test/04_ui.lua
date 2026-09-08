@@ -155,20 +155,22 @@ function printEngineScore()
 end
 
 -- Builds the top border of the board with a score indicator embedded in it.
--- Each 100 points of |score| earns one tick mark, using boundaries
--- 1-199 -> 1 tick, 200-299 -> 2 ticks, 300-399 -> 3 ticks, etc.
--- (i.e. tick count = floor(|score|/100) + 1, capped to the inner width).
+-- Each 100 points of |score| earns one tick mark: 1-99 -> 1 tick (special
+-- case so the indicator always shows even under 100), 100-199 -> 1 tick,
+-- 200-299 -> 2 ticks, 300-399 -> 3 ticks, etc.
+-- (i.e. tick count = max(1, floor(|score|/100)), capped to the inner width).
 -- The indicator symbol sits at the tick-th inner cell from the side that
 -- owns the advantage: from the left (your side) when you're ahead, from
 -- the right (Sunfish's side) when Sunfish is ahead. Corners (+ or the
 -- unicode corner glyphs) are never overwritten by the indicator.
 local SCORE_TICK_SYMBOL = '\xe2\x88\x86' -- ∆
 local INNER_WIDTH = 26 -- must match string.rep(..., 26) used for the border body
+local BORDER_LEAD_SPACES = "    " -- left-hand indent before the border (2 extra vs before)
 
 local function scoreTickCount(score)
    local mag = math.abs(score)
    if mag <= 0 then return 0 end
-   local ticks = math.floor(mag / 100) + 1
+   local ticks = math.max(1, math.floor(mag / 100))
    if ticks > INNER_WIDTH then ticks = INNER_WIDTH end
    return ticks
 end
@@ -176,9 +178,9 @@ end
 local function buildTopBorderLine(unicodeMode)
    local leftCap, fill, rightCap
    if unicodeMode then
-      leftCap, fill, rightCap = "  \xe2\x95\x94", '\xe2\x95\x90', "\xe2\x95\x97"
+      leftCap, fill, rightCap = BORDER_LEAD_SPACES .. "\xe2\x95\x94", '\xe2\x95\x90', "\xe2\x95\x97"
    else
-      leftCap, fill, rightCap = "  +", "-", "+"
+      leftCap, fill, rightCap = BORDER_LEAD_SPACES .. "+", "-", "+"
    end
 
    local cells = {}
