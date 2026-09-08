@@ -146,11 +146,11 @@ function printEngineScore()
    end
 
    if score < 0 then
-      echoS(string.format("➜    Score: +%d (You)", math.abs(score)))
+      echoS(string.format("\xe2\x80\x8b    Score: +%d (You)", math.abs(score)))
    elseif score > 0 then
-      echoE(string.format("➜    Score: +%d (Sunfish)", score))
+      echoE(string.format("\xe2\x80\x8b    Score: +%d (Sunfish)", score))
    else
-      echoW("➜    Score: 0 (equal)")
+      echoW("\xe2\x80\x8b    Score: 0 (equal)")
    end
 end
 
