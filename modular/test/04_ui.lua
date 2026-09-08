@@ -169,12 +169,14 @@ local SCORE_TICK_SYMBOL = '\xe2\x88\x86' -- ∆
 local INNER_WIDTH = 26 -- must match string.rep(..., 26) used for the border body
 local BORDER_LEAD_SPACES = "  " -- indent before the border - matches bottomBorder/sideBorder alignment
 -- echoS/echoE route through binding.exec("echo -X " .. msg), which strips
--- leading whitespace before printing (unlike plain print()). A regular
--- space here would vanish and the colored border would print flush-left,
--- breaking alignment with the rest of the board. U+00A0 (non-breaking
--- space) renders identically in a monospace terminal but isn't touched by
--- that trim, so it survives the round trip.
-local BORDER_LEAD_SPACES_COLORED = "\xc2\xa0\xc2\xa0" -- two non-breaking spaces
+-- leading whitespace before printing (unlike plain print()). Two plain
+-- spaces here would vanish and the colored border would print flush-left,
+-- breaking alignment with the rest of the board. A leading zero-width
+-- space (U+200B) is invisible in a monospace terminal and isn't
+-- whitespace, so it anchors the line and the two real spaces after it
+-- survive the trim - same trick the "➜ Score:" line already relies on
+-- with its leading glyph.
+local BORDER_LEAD_SPACES_COLORED = "\xe2\x80\x8b  " -- ZWSP + two spaces
 
 local function scoreTickCount(score)
    local mag = math.abs(score)
