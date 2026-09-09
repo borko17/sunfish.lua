@@ -650,19 +650,24 @@ print("Captured: " .. renderCaptured(capturedByEngine, opponentSymbols))
          displayGuards[119 - idx] = true
       end
 
-      -- Score display refreshed here using pos.score - the incremental
-      -- material/positional score already tracked on the Position object
-      -- (updated on every move_impl(), no search involved). This is instant
-      -- (no MTD-bi node-budget issue like the old SCORE_PEEK_NODES search had)
-      -- but it's a static eval, not a searched score: no lookahead, so it
-      -- won't see tactics beyond material/PST terms. Sunfish's real search()
-      -- below still overwrites it with the searched score once it moves.
-      setEngineScore(pos.score)
+      -- Score display refreshed here using a small SCORE_PEEK_NODES-budget
+      -- search (peeking from the engine's side, i.e. Sunfish-to-move), so
+      -- the Score line/tick border reflects a real (if shallow) lookahead
+      -- right after your move, rather than just a static material/PST
+      -- eval. Cheap since the budget is small; Sunfish's real search()
+      -- below still overwrites it with the full-depth searched score once
+      -- it moves.
+      if not isMateNow and engineHasMove then
+         local peekMove, peekScore = search(pos, SCORE_PEEK_NODES, gameHistory)
+         setEngineScore(peekScore)
+      else
+         setEngineScore(pos.score)
+      end
 
       if next(displayCheckers) and not isMateNow then
          echoS("Check!")
       end
-      printboard(arrayToBoard(pos:rotate().board), {usermove[1], usermove[2]}, displayCheckers, displayGuards, isMateNow, nil, true)
+      printboard(arrayToBoard(pos:rotate().board), {usermove[1], usermove[2]}, displayCheckers, displayGuards, isMateNow, nil, false)
 
       if isMateNow then
          echoS("Checkmate in " .. whiteMoves .. " moves!")
