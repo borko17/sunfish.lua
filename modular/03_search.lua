@@ -238,7 +238,7 @@ local function bound(p, gamma, depth, root, ctx)
    return best
 end
 
-function search(pos, maxn, history)
+function search(pos, maxn, history, quiet)
    maxn = maxn or NODES_SEARCHED
    history = history or {}
 
@@ -304,24 +304,26 @@ function search(pos, maxn, history)
       finalScore = score
       reachedDepth = depth
 
-      local nodeDisplay
-      if maxn < 1000 then
-         nodeDisplay = tostring(maxn)
-      else
-         nodeDisplay = string.format("%dk", math.floor(maxn / 1000))
-      end
-      local nowTime = os.clock()
-      local depthTime = nowTime - prevDepthTime
-      prevDepthTime = nowTime
-      local centis = math.floor(depthTime * 100 + 0.5)
-      local whole = math.floor(centis / 100)
-      local frac = centis % 100
-      local depthTimeStr = string.format("%d,%02d", whole, frac)
+      if not quiet and DEPTH_PRINT_ENABLED then
+         local nodeDisplay
+         if maxn < 1000 then
+            nodeDisplay = tostring(maxn)
+         else
+            nodeDisplay = string.format("%dk", math.floor(maxn / 1000))
+         end
+         local nowTime = os.clock()
+         local depthTime = nowTime - prevDepthTime
+         prevDepthTime = nowTime
+         local centis = math.floor(depthTime * 100 + 0.5)
+         local whole = math.floor(centis / 100)
+         local frac = centis % 100
+         local depthTimeStr = string.format("%d,%02d", whole, frac)
 
-      echoW(string.format(
-         "(depth %d, %d/%s nodes) - %ss",
-         depth, nodes, nodeDisplay, depthTimeStr
-      ))
+         echoW(string.format(
+            "(depth %d, %d/%s nodes) - %ss",
+            depth, nodes, nodeDisplay, depthTimeStr
+         ))
+      end
 
       if nodes >= maxn or
          math.abs(score) >= ctx.MATE_UPPER then
