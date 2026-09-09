@@ -146,12 +146,79 @@ function printEngineScore()
    end
 
    if score < 0 then
-      echoS(string.format("➜    Score: +%d (You)", math.abs(score)))
+      echoS(string.format("\xe2\x80\x8b    Score: +%d (You)", math.abs(score)))
    elseif score > 0 then
-      echoE(string.format("➜    Score: +%d (Sunfish)", score))
+      echoE(string.format("\xe2\x80\x8b    Score: +%d (Sunfish)", score))
    else
-      echoW("➜    Score: 0 (equal)")
+      echoW("\xe2\x80\x8b    Score: 0 (equal)")
    end
+end
+
+-- Builds a border line (top or bottom) with a score indicator embedded in
+-- it. Each 100 points of |score| earns one tick mark: 1-99 -> 1 tick
+-- (special case so the indicator always shows even under 100), 100-199 ->
+-- 1 tick, 200-299 -> 2 ticks, 300-399 -> 3 ticks, etc.
+-- (i.e. tick count = max(1, floor(|score|/100)), capped to the inner width).
+-- The indicator symbol always sits at the tick-th inner cell counting from
+-- the LEFT, regardless of who is ahead - only the border's color (green for
+-- you, red for Sunfish) shows who has the advantage. Corners (+ or the
+-- unicode corner glyphs) are never overwritten by the indicator. The border
+-- keeps the same indent as the rest of the board (bottom border, ranks) so
+-- the left + always lines up with the | below it, colored or not.
+local SCORE_TICK_SYMBOL = "#"
+local INNER_WIDTH = 26 -- must match string.rep(..., 26) used for the border body
+local BORDER_LEAD_SPACES = "  " -- indent before the border - matches bottomBorder/sideBorder alignment
+-- echoS/echoE route through binding.exec("echo -X " .. msg), which strips
+-- leading whitespace before printing (unlike plain print()). Two plain
+-- spaces here would vanish and the colored border would print flush-left,
+-- breaking alignment with the rest of the board. A leading zero-width
+-- space (U+200B) is invisible in a monospace terminal and isn't
+-- whitespace, so it anchors the line and the two real spaces after it
+-- survive the trim - same trick the "➜ Score:" line already relies on
+-- with its leading glyph.
+local BORDER_LEAD_SPACES_COLORED = "\xe2\x80\x8b  " -- ZWSP + two spaces
+
+local function scoreTickCount(score)
+   local mag = math.abs(score)
+   if mag <= 0 then return 0 end
+   local ticks = math.max(1, math.floor(mag / 100))
+   if ticks > INNER_WIDTH then ticks = INNER_WIDTH end
+   return ticks
+end
+
+-- corner: "top" uses +/╔╗ style corners, "bottom" uses +/╚╝ style corners.
+local function buildScoreBorderLine(unicodeMode, corner)
+   local score = CURRENT_ENGINE_SCORE
+   local hasIndicator = score ~= nil and score ~= 0
+   local lead = hasIndicator and BORDER_LEAD_SPACES_COLORED or BORDER_LEAD_SPACES
+
+   local leftCap, fill, rightCap
+   if unicodeMode then
+      local horiz = '\xe2\x95\x90'  -- ═
+      if corner == "top" then
+         leftCap, fill, rightCap = lead .. "\xe2\x95\x94", horiz, "\xe2\x95\x97"  -- ╔ ═ ╗
+      else
+         leftCap, fill, rightCap = lead .. "\xe2\x95\x9a", horiz, "\xe2\x95\x9d"  -- ╚ ═ ╝
+      end
+   else
+      leftCap, fill, rightCap = lead .. "+", "-", "+"
+   end
+
+   local cells = {}
+   for _ = 1, INNER_WIDTH do
+      cells[#cells + 1] = fill
+   end
+
+   local colorFn = nil
+   if hasIndicator then
+      local ticks = scoreTickCount(score)
+      -- Indicator always counts from the left; color alone signals who's ahead.
+      cells[ticks] = SCORE_TICK_SYMBOL
+      colorFn = (score < 0) and echoS or echoE
+   end
+
+   local line = leftCap .. table.concat(cells) .. rightCap
+   return line, colorFn
 end
 
 function printboard(board, lastMove, checkers, guards, isMate, hints, skipScore)
@@ -168,19 +235,22 @@ function printboard(board, lastMove, checkers, guards, isMate, hints, skipScore)
    if not skipScore then
       printEngineScore()
    end
-   local topBorder, sideBorder, bottomBorder
+   local topBorder, sideBorder, bottomBorder, topBorderColorFn, bottomBorderColorFn
    if usingUnicodePieces() then
-      local horiz = '\xe2\x95\x90'  -- ═
-      topBorder    = "  \xe2\x95\x94" .. string.rep(horiz, 26) .. "\xe2\x95\x97"  -- ╔ ... ╗
-      sideBorder   = '\xe2\x95\x91'                                               -- ║
-      bottomBorder = "  \xe2\x95\x9a" .. string.rep(horiz, 26) .. "\xe2\x95\x9d"  -- ╚ ... ╝
+      topBorder, topBorderColorFn = buildScoreBorderLine(true, "top")
+      sideBorder = '\xe2\x95\x91'  -- ║
+      bottomBorder, bottomBorderColorFn = buildScoreBorderLine(true, "bottom")
    else
-      topBorder = "  +" .. string.rep("-", 26) .. "+"
+      topBorder, topBorderColorFn = buildScoreBorderLine(false, "top")
       sideBorder = "|"
-      bottomBorder = "  +" .. string.rep("-", 26) .. "+"
+      bottomBorder, bottomBorderColorFn = buildScoreBorderLine(false, "bottom")
    end
 
-   print(topBorder)
+   if topBorderColorFn then
+      topBorderColorFn(topBorder)
+   else
+      print(topBorder)
+   end
 -- Rank rows top-to-bottom, and files within each row left-to-right.
 -- NOTE: the board string passed in here is already physically rotated 180°
 -- when PLAYER_IS_BLACK (see Position:rotate() in main()), so the *reading*
@@ -267,7 +337,11 @@ end
       table.insert(line, sideBorder)
       print(table.concat(line))
    end
-   print(bottomBorder)
+   if bottomBorderColorFn then
+      bottomBorderColorFn(bottomBorder)
+   else
+      print(bottomBorder)
+   end
    if PLAYER_IS_BLACK then
       print("     h  g  f  e  d  c  b  a")
    else
