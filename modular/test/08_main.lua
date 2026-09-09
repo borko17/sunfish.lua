@@ -565,13 +565,14 @@ for idx in pairs(guardsAfterUser) do
    displayGuards[119 - idx] = true
 end
 
--- Score display intentionally NOT refreshed here. Doing so used to run a
--- SCORE_PEEK_NODES search right after your move, but MTD-bi's inner
--- while-loop only checks the node budget BETWEEN depth iterations, not
--- inside it - so even maxn=0 still ran a full depth=1 pass (measured at
--- ~4700 bound() calls, ~2.4s) before the budget check could ever fire.
--- CURRENT_ENGINE_SCORE simply keeps showing Sunfish's last score (from
--- before your move) until his real search() call below produces a new one.
+-- Score display refreshed here using pos.score - the incremental
+-- material/positional score already tracked on the Position object
+-- (updated on every move_impl(), no search involved). This is instant
+-- (no MTD-bi node-budget issue like the old SCORE_PEEK_NODES search had)
+-- but it's a static eval, not a searched score: no lookahead, so it
+-- won't see tactics beyond material/PST terms. Sunfish's real search()
+-- below still overwrites it with the searched score once it moves.
+setEngineScore(pos.score)
 
 -- Print "Check!" only if not mate
 if next(displayCheckers) and not isMateNow then
