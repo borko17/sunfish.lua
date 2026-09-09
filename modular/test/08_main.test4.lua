@@ -515,7 +515,8 @@ break
 end
 
 
-      local userCap = capturedAt(pos, usermove)
+      -- Nakon tvog poteza (linija ~570-585):
+local userCap = capturedAt(pos, usermove)
 local userPawnMove = isPawnMove(pos, usermove)
 if userCap or userPawnMove then
    halfmoveClock = 0
@@ -534,13 +535,16 @@ table.insert(moveHistory, {
 })
 pos = pos:move(usermove)
 
-local peekScore = pos.score  -- ovo je negativno kad ti uzmeš figuru (jer si Black)
+local peekScore = pos.score  -- ovo je negativno kad ti uzmeš figuru
 pos.score = 0
 gameHistory[tpKey(pos)] = true
 positionCounts[tpKey(pos)] = (positionCounts[tpKey(pos)] or 0) + 1
 
 -- POPRAVKA: okreni score jer je pos u Black view-u
 setEngineScore(-peekScore)  -- <--- OVO JE POPRAVKA
+
+-- DODATNI DEBUG ISPIS (opciono, možeš kasnije izbrisati)
+echoW(string.format("📊 Score: peekScore=%d, negated=%d", peekScore, -peekScore))
 
 -- Snapshot stores the actual current Position. saveGame() normalizes its
 -- orientation from PLAYER_IS_BLACK + the snapshot's real ply history.
