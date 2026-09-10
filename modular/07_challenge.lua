@@ -9,8 +9,7 @@ function withQuietExec(fn)
    return a, b, c, d, e
 end
 
--- Best move for the side to move in `pos` (player/White in challenge mode), shown as an on-board hint; same node budget as Sunfish's own move. search() only treats a position as a repetition draw at deeper plies, never for the root move, so it can keep suggesting a back-and-forth into a seen position - if the top suggestion would revisit `history`, fall back to the best legal alternative that doesn't. avoidMove (player's own move from two of their own plies ago, e.g. an undone d4d3) is also excluded when a non-repeating alternative exists, to stop the hint nudging a stalling shuffle.
-HINT_NODES_BEST = nil       -- nil = reuse NODES_SEARCHED
+-- Best move for the side to move in `pos` (player/White in challenge mode), shown as an on-board hint; uses HINT_NODES_BEST (config.lua) - a deeper budget than Sunfish's own reply, since the hint is computed once per move rather than under time pressure. search() only treats a position as a repetition draw at deeper plies, never for the root move, so it can keep suggesting a back-and-forth into a seen position - if the top suggestion would revisit `history`, fall back to the best legal alternative that doesn't. avoidMove (player's own move from two of their own plies ago, e.g. an undone d4d3) is also excluded when a non-repeating alternative exists, to stop the hint nudging a stalling shuffle.
 
 function movesEqual(a, b)
    return a and b and a[1] == b[1] and a[2] == b[2] and a[3] == b[3]
@@ -21,7 +20,7 @@ function findHintMove(pos, history, avoidMove, showDepth)
    if #legal == 0 then return nil end
 
    local runSearch = function()
-      local mv = search(pos, HINT_NODES_BEST or NODES_SEARCHED, history)
+      local mv = search(pos, HINT_NODES_BEST, history)
       return mv
    end
    local best = showDepth and runSearch() or withQuietExec(runSearch)
