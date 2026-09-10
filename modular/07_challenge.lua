@@ -538,7 +538,6 @@ function playChallengeGame(board, startPos, startLastMove, startCapturedByUser,
                            end
                            table.insert(moveHistory, {notation = engineMoveNotation, by = "sunfish"})
                            pos = rotated:move(enginemove)
-                           pos.score = 0
                            blackMoves = blackMoves + 1
                            gameHistory[tpKey(pos)] = true
                            positionCounts[tpKey(pos)] = (positionCounts[tpKey(pos)] or 0) + 1
@@ -628,7 +627,6 @@ print("Captured: " .. renderCaptured(capturedByEngine, opponentSymbols))
       end
       table.insert(moveHistory, {notation = userNotation, by = "you"})
       pos = pos:move(usermove)
-      pos.score = 0
       gameHistory[tpKey(pos)] = true
       positionCounts[tpKey(pos)] = (positionCounts[tpKey(pos)] or 0) + 1
 
@@ -754,7 +752,6 @@ print("Captured: " .. renderCaptured(capturedByEngine, opponentSymbols))
       table.insert(moveHistory, {notation = engineMoveNotation, by = "sunfish"})
       -- IMPORTANT: Sunfish's move must be applied before computing the next position, history, or board display.
       pos = pos:move(enginemove)
-      pos.score = 0
 
       blackMoves = blackMoves + 1
       gameHistory[tpKey(pos)] = true
