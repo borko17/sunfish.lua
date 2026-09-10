@@ -234,24 +234,33 @@ local function scoreTickCount(score)
    return ticks
 end
 
--- Rough score shown after the border: sign * floor(|score|/100), i.e. the
--- same 100-point unit the tick count uses, but signed and uncapped (unlike
--- scoreStep's 0-26 clamp) so the number keeps growing with the position.
--- Positive = Sunfish ahead, negative = you ahead - matches the tick color.
+-- Rough score shown after the border: floor(|score|/100), i.e. the same
+-- 100-point unit the tick count uses. Always shown as a plain positive
+-- number - the S/Y label already says who's ahead, so the number is that
+-- side's margin, not a signed raw score.
 local function roughScoreValue(score)
-   local mag = math.floor(math.abs(score) / 100)
-   if score < 0 then mag = -mag end
-   return mag
+   return math.floor(math.abs(score) / 100)
 end
 
 -- corner: "top" uses +/╔╗ style corners, "bottom" uses +/╚╝ style corners.
 -- withLabel: when true (used on the top border only), prefixes the line
--- with "S "/"Y " (who's ahead) or a blank two-space pad when even, and
+-- with "S"/"Y" directly against the border (no gap) - S when Sunfish is
+-- ahead (score positive), Y when you're ahead (score negative) - and
 -- appends the rough score number after the right cap.
 local function buildScoreBorderLine(unicodeMode, corner, withLabel)
    local score = CURRENT_ENGINE_SCORE
    local hasIndicator = score ~= nil and score ~= 0
-   local lead = hasIndicator and BORDER_LEAD_SPACES_COLORED or BORDER_LEAD_SPACES
+
+   local lead
+   if withLabel then
+      if hasIndicator then
+         lead = ((score < 0) and "Y" or "S") .. " "
+      else
+         lead = "  "
+      end
+   else
+      lead = hasIndicator and BORDER_LEAD_SPACES_COLORED or BORDER_LEAD_SPACES
+   end
 
    local leftCap, fill, rightCap
    if unicodeMode then
@@ -280,15 +289,8 @@ local function buildScoreBorderLine(unicodeMode, corner, withLabel)
 
    local line = leftCap .. table.concat(cells) .. rightCap
 
-   if withLabel then
-      local sideLabel = "  "
-      if hasIndicator then
-         sideLabel = (score < 0) and "Y " or "S "
-      end
-      line = sideLabel .. line
-      if score ~= nil then
-         line = line .. " " .. tostring(roughScoreValue(score))
-      end
+   if withLabel and score ~= nil then
+      line = line .. " " .. tostring(roughScoreValue(score))
    end
 
    return line, colorFn
