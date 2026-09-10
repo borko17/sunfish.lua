@@ -104,7 +104,6 @@ function main(playAsBlack, showHeader)
          table.insert(moveHistory, {notation = engineMoveNotation, by = "sunfish"})
          pos = rotated:move(enginemove)
          blackMoves = 1
-         pos.score = 0
          gameHistory[tpKey(pos)] = true
          positionCounts[tpKey(pos)] = (positionCounts[tpKey(pos)] or 0) + 1
          -- lastMove/highlight use the same 119-x coordinates as the notation above
@@ -387,7 +386,6 @@ assert(score)
                table.insert(moveHistory, {notation = engineMoveNotation, by = "sunfish"})
                pos = rotated:move(enginemove)
                blackMoves = blackMoves + 1
-               pos.score = 0
                gameHistory[tpKey(pos)] = true
                positionCounts[tpKey(pos)] = (positionCounts[tpKey(pos)] or 0) + 1
                lastMove = {notFrom, notTo}
@@ -538,7 +536,6 @@ end
          by = "you"
       })
       pos = pos:move(usermove)
-pos.score = 0
 gameHistory[tpKey(pos)] = true
 positionCounts[tpKey(pos)] = (positionCounts[tpKey(pos)] or 0) + 1
 
@@ -675,7 +672,6 @@ print("Captured: " .. renderCaptured(capturedByEngine, opponentSymbols))
 table.insert(moveHistory, {notation = engineMoveNotation, by = "sunfish"})
 pos = pos:move(enginemove)
 blackMoves = blackMoves + 1
-pos.score = 0  -- CRITICAL!
 gameHistory[tpKey(pos)] = true
 positionCounts[tpKey(pos)] = (positionCounts[tpKey(pos)] or 0) + 1
       lastMove = {notFrom, notTo}
