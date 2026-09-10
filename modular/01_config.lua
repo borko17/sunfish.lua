@@ -16,6 +16,7 @@ NODES_SEARCHED = 4000 -- node budget/search; soft limit, checked only between de
 TABLE_SIZE = NODES_SEARCHED * 25 -- scaled off NODES_SEARCHED so it doesn't thrash; upstream's 1e6 too heavy for Luaj-jse on phone
 
 CHALLENGE_ENGINE_NODES = 1000 -- separate, weaker budget for Sunfish's replies in Challenge mode
+HINT_NODES_BEST = 12000 -- node budget for the player's on-board hint; deeper than a live reply since it's computed once per move, not under time pressure - catches "good-looking but refuted next move" traps a shallow search misses
 CHALLENGE_MIN_PIECES = 10
 CHALLENGE_MAX_PIECES = 20
 CHALLENGE_GEN_ATTEMPTS = 400
