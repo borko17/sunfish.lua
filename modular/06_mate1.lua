@@ -375,6 +375,10 @@ end
 end
 
 function aipuzMate1()
+   -- Puzzle positions are randomly assembled, not reached via play, so the
+   -- engine score carried over from the game (e.g. "1 Minimal advantage")
+   -- is meaningless here and must not be shown against the puzzle board.
+   clearEngineScore()
    print("")
    echoW("=== PUZZLE MODE: MATE IN 1 ===")
    print("• 'h1/h2/h3/h4' for hint")
