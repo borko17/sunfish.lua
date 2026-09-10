@@ -139,18 +139,68 @@ function clearEngineScore()
    CURRENT_ENGINE_SCORE = nil
 end
 
+-- Text describing each 0-26 step on the evaluation scale, index 1 = step 0
+-- (even), index 27 = step 26 (completely winning). Same text is used
+-- regardless of which side is ahead - only the prefix (below) says who.
+local SCORE_STEP_TEXT = {
+   [0]  = "Even position",
+   [1]  = "Minimal advantage",
+   [2]  = "Very slight edge",
+   [3]  = "Slight advantage",
+   [4]  = "Small positional edge",
+   [5]  = "Noticeable positional edge",
+   [6]  = "Solid positional edge",
+   [7]  = "Strong positional edge",
+   [8]  = "Clear initiative",
+   [9]  = "Active initiative",
+   [10] = "Strong initiative",
+   [11] = "Dangerous initiative",
+   [12] = "Significant advantage",
+   [13] = "Clear advantage",
+   [14] = "Strong advantage",
+   [15] = "Large advantage",
+   [16] = "Major advantage",
+   [17] = "Substantial advantage",
+   [18] = "Very strong advantage",
+   [19] = "Dominant position",
+   [20] = "Commanding position",
+   [21] = "Winning advantage",
+   [22] = "Decisive advantage",
+   [23] = "Very large advantage",
+   [24] = "Almost winning",
+   [25] = "Practically winning",
+   [26] = "Completely winning",
+}
+local SCORE_STEP_MAX = 26
+
+-- Converts a raw engine score into a 0-26 step on the evaluation scale.
+-- Same rule the border tick indicator uses: any nonzero magnitude earns at
+-- least step 1 (so "barely ahead" never reads as "even"), then one step per
+-- 100 points, capped at 26. Kept as the single source of truth - the border
+-- tick count below just calls this instead of recomputing it.
+local function scoreStep(score)
+   local mag = math.abs(score)
+   if mag <= 0 then return 0 end
+   local step = math.max(1, math.floor(mag / 100))
+   if step > SCORE_STEP_MAX then step = SCORE_STEP_MAX end
+   return step
+end
+
 function printEngineScore()
    local score = CURRENT_ENGINE_SCORE
    if score == nil then
       return
    end
 
+   local step = scoreStep(score)
+   local text = SCORE_STEP_TEXT[step]
+
    if score < 0 then
-      echoS(string.format("\xe2\x80\x8b     Score: +%d (You)", math.abs(score)))
+      echoS(string.format("\xe2\x80\x8b   %s", text))
    elseif score > 0 then
-      echoE(string.format("\xe2\x80\x8b     Score: +%d (Sunfish)", score))
+      echoE(string.format("\xe2\x80\x8b   %s", text))
    else
-      echoW("\xe2\x80\x8b     Score: 0 (equal)")
+      echoW(string.format("\xe2\x80\x8b   %s", text))
    end
 end
 
@@ -179,9 +229,7 @@ local BORDER_LEAD_SPACES = "  " -- indent before the border - matches bottomBord
 local BORDER_LEAD_SPACES_COLORED = "\xe2\x80\x8b  " -- ZWSP + two spaces
 
 local function scoreTickCount(score)
-   local mag = math.abs(score)
-   if mag <= 0 then return 0 end
-   local ticks = math.max(1, math.floor(mag / 100))
+   local ticks = scoreStep(score)
    if ticks > INNER_WIDTH then ticks = INNER_WIDTH end
    return ticks
 end
