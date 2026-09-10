@@ -234,11 +234,43 @@ local function scoreTickCount(score)
    return ticks
 end
 
+-- Rough score shown after the border: floor(|score|/100), i.e. the same
+-- 100-point unit the tick count uses. Always shown as a plain positive
+-- number - the S/Y label already says who's ahead, so the number is that
+-- side's margin, not a signed raw score. Any nonzero magnitude shows at
+-- least 1 (matches scoreStep's rule) so "barely ahead" never prints as 0,
+-- which would misleadingly read as even. Mate scores (|score| >= MATE_VALUE)
+-- print as "MATE" instead of a huge meaningless number.
+local function roughScoreValue(score)
+   local mag = math.abs(score)
+   if mag >= MATE_VALUE then
+      return "MATE"
+   end
+   if mag <= 0 then
+      return "0"
+   end
+   return tostring(math.max(1, math.floor(mag / 100)))
+end
+
 -- corner: "top" uses +/╔╗ style corners, "bottom" uses +/╚╝ style corners.
-local function buildScoreBorderLine(unicodeMode, corner)
+-- withLabel: when true (used on the top border only), prefixes the line
+-- with "S"/"Y" directly against the border (no gap) - S when Sunfish is
+-- ahead (score positive), Y when you're ahead (score negative) - and
+-- appends the rough score number after the right cap.
+local function buildScoreBorderLine(unicodeMode, corner, withLabel)
    local score = CURRENT_ENGINE_SCORE
    local hasIndicator = score ~= nil and score ~= 0
-   local lead = hasIndicator and BORDER_LEAD_SPACES_COLORED or BORDER_LEAD_SPACES
+
+   local lead
+   if withLabel then
+      if hasIndicator then
+         lead = ((score < 0) and "Y" or "S") .. " "
+      else
+         lead = "  "
+      end
+   else
+      lead = hasIndicator and BORDER_LEAD_SPACES_COLORED or BORDER_LEAD_SPACES
+   end
 
    local leftCap, fill, rightCap
    if unicodeMode then
@@ -266,6 +298,11 @@ local function buildScoreBorderLine(unicodeMode, corner)
    end
 
    local line = leftCap .. table.concat(cells) .. rightCap
+
+   if withLabel and score ~= nil then
+      line = line .. " " .. roughScoreValue(score)
+   end
+
    return line, colorFn
 end
 
@@ -285,11 +322,11 @@ function printboard(board, lastMove, checkers, guards, isMate, hints, skipScore)
    end
    local topBorder, sideBorder, bottomBorder, topBorderColorFn, bottomBorderColorFn
    if usingUnicodePieces() then
-      topBorder, topBorderColorFn = buildScoreBorderLine(true, "top")
+      topBorder, topBorderColorFn = buildScoreBorderLine(true, "top", true)
       sideBorder = '\xe2\x95\x91'  -- ║
       bottomBorder, bottomBorderColorFn = buildScoreBorderLine(true, "bottom")
    else
-      topBorder, topBorderColorFn = buildScoreBorderLine(false, "top")
+      topBorder, topBorderColorFn = buildScoreBorderLine(false, "top", true)
       sideBorder = "|"
       bottomBorder, bottomBorderColorFn = buildScoreBorderLine(false, "bottom")
    end
