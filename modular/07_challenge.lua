@@ -312,6 +312,14 @@ function playChallengeGame(board, startPos, startLastMove, startCapturedByUser,
             print("Captured: " .. renderCaptured(capturedByUser, blackSymbols))
             goto continue
          end
+         if crdn == 'td' then
+            DEPTH_PRINT_ENABLED = not DEPTH_PRINT_ENABLED
+            print("----")
+            echoW("Depth print: " .. (DEPTH_PRINT_ENABLED and "ON" or "OFF"))
+            showBoard(checkers, guards, false, false)
+            print("Captured: " .. renderCaptured(capturedByUser, blackSymbols))
+            goto continue
+         end
          if crdn == 'h' then
             print("----")
             showHelpChallenge()
@@ -657,8 +665,15 @@ print("Captured: " .. renderCaptured(capturedByEngine, opponentSymbols))
       -- eval. Cheap since the budget is small; Sunfish's real search()
       -- below still overwrites it with the full-depth searched score once
       -- it moves.
-      if not isMateNow and engineHasMove then
-         local peekMove, peekScore = search(pos, SCORE_PEEK_NODES, gameHistory)
+      -- On checkmate there's no lookahead to peek and pos.score is just
+      -- the pre-mate material/PST eval (often small), so force the score
+      -- to the max "You" end of the scale instead of letting it show a
+      -- stale/tiny number like "Even position" right under a mate you
+      -- just delivered.
+      if isMateNow then
+         setEngineScore(-MATE_UPPER)
+      elseif engineHasMove then
+         local peekMove, peekScore = search(pos, SCORE_PEEK_NODES, gameHistory, true)
          setEngineScore(peekScore)
       else
          setEngineScore(pos.score)
