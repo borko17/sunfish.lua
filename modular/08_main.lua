@@ -450,7 +450,13 @@ print("Captured: " .. renderCaptured(capturedByUser, ownSymbols))
       showAbout()
       displayPosition(pos, lastMove, capturedByUser, capturedByEngine, blackMoves)
    elseif crdn == 'm1' then
+      local preM1Score = CURRENT_ENGINE_SCORE
       aipuzMate1()
+      if preM1Score ~= nil then
+         setEngineScore(preM1Score)
+      else
+         clearEngineScore()
+      end
       echoW("Resuming the game.")
       displayPosition(pos, lastMove, capturedByUser, capturedByEngine, blackMoves)
    elseif crdn == 'deb1' then
