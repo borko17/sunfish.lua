@@ -250,7 +250,6 @@ function playChallengeGame(board, startPos, startLastMove, startCapturedByUser,
          local startInputTime = os.clock()  -- start timing
    local crdn = input()
    local inputElapsed = os.clock() - startInputTime  -- elapsed time
-         local crdn = input()
          if not crdn then
             echoE("\nNo input (EOF). Ending challenge.")
             return "quit"
