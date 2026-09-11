@@ -252,11 +252,11 @@ function printEngineScore()
    local step = scoreStep(score)
 
    if score < 0 then
-      local text = SCORE_S_STEP_TEXT[-step]
+      local text = SCORE_Y_STEP_TEXT[step]
       local line = roughScoreValue(score) .. " - " .. text
       echoS(string.format("\xe2\x80\x8b   %s", line))
    elseif score > 0 then
-      local text = SCORE_Y_STEP_TEXT[step]
+      local text = SCORE_S_STEP_TEXT[-step]
       local line = roughScoreValue(score) .. " - " .. text
       echoE(string.format("\xe2\x80\x8b   %s", line))
    else
