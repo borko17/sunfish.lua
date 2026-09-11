@@ -142,13 +142,13 @@ end
 -- Text describing each 0-26 step on the evaluation scale, index 1 = step 0
 -- (even), index 27 = step 26 (completely winning). Same text is used
 -- regardless of which side is ahead - only the prefix (below) says who.
-local SCORE_STEP_TEXT = {
+local SCORE_Y_STEP_TEXT = {
    [0]  = "Even position",
    [1]  = "Minimal advantage",
    [2]  = "Very slight edge",
    [3]  = "Slight advantage",
    [4]  = "Small positional edge",
-   [5]  = "Noticeable positional edge",
+   [5]  = "Noticeable edge",
    [6]  = "Solid positional edge",
    [7]  = "Strong positional edge",
    [8]  = "Clear initiative",
@@ -171,6 +171,35 @@ local SCORE_STEP_TEXT = {
    [25] = "Practically winning",
    [26] = "Completely winning",
 }
+
+local SCORE_S_STEP_TEXT = {
+   [-1]  = "Minimal concern",
+   [-2]  = "Slightly worse",
+   [-3]  = "Small positional loss",
+   [-4]  = "Noticeable weakness",
+   [-5]  = "Clear weakness",
+   [-6]  = "Solid disadvantage",
+   [-7]  = "Strong disadvantage",
+   [-8]  = "Clear initiative lost",
+   [-9]  = "Passive position",
+   [-10] = "Dangerous pressure",
+   [-11] = "Significant weakness",
+   [-12] = "Clear disadvantage",
+   [-13] = "Strong disadvantage",
+   [-14] = "Large disadvantage",
+   [-15] = "Major disadvantage",
+   [-16] = "Serious disadvantage",
+   [-17] = "Substantial loss",
+   [-18] = "Very strong pressure",
+   [-19] = "Dominated position",
+   [-20] = "Commanding opponent",
+   [-21] = "Near losing position",
+   [-22] = "Decisive setback",
+   [-23] = "Severe disadvantage",
+   [-24] = "Almost lost",
+   [-25] = "Practically lost",
+   [-26] = "Completely lost",
+}
 local SCORE_STEP_MAX = 26
 
 -- Converts a raw engine score into a 0-26 step on the evaluation scale.
@@ -186,21 +215,54 @@ local function scoreStep(score)
    return step
 end
 
+-- Rough score shown before the evaluation text: floor(|score|/100), i.e.
+-- the same 100-point unit the tick count uses. Always shown as a plain
+-- positive number - the color/S/Y label already says who's ahead, so the
+-- number is that side's margin, not a signed raw score. Any nonzero
+-- magnitude shows at least 1 (matches scoreStep's rule) so "barely ahead"
+-- never prints as 0, which would misleadingly read as even. Mate scores
+-- (|score| >= MATE_VALUE) print as "MATE" instead of a huge meaningless
+-- number.
+local function roughScoreValue(score)
+   local mag = math.abs(score)
+   if mag >= MATE_VALUE then
+      return "MATE"
+   end
+   if mag <= 0 then
+      return "0"
+   end
+   return tostring(math.max(1, math.floor(mag / 100)))
+end
+
 function printEngineScore()
    local score = CURRENT_ENGINE_SCORE
    if score == nil then
       return
    end
 
+   if math.abs(score) >= MATE_VALUE then
+      if score < 0 then
+         echoS(string.format("\xe2\x80\x8b   %s", "MATE \xc2\xbb Checkmate"))
+      else
+         echoE(string.format("\xe2\x80\x8b   %s", "-MATE \xc2\xbb Checkmate"))
+      end
+      return
+   end
+
    local step = scoreStep(score)
-   local text = SCORE_STEP_TEXT[step]
 
    if score < 0 then
-      echoS(string.format("\xe2\x80\x8b   %s", text))
+      local text = SCORE_Y_STEP_TEXT[step]
+      local line = roughScoreValue(score) .. " \xc2\xbb " .. text
+      echoS(string.format("\xe2\x80\x8b   %s", line))
    elseif score > 0 then
-      echoE(string.format("\xe2\x80\x8b   %s", text))
+      local text = SCORE_S_STEP_TEXT[-step]
+      local line = "-" .. roughScoreValue(score) .. " \xc2\xbb " .. text
+      echoE(string.format("\xe2\x80\x8b   %s", line))
    else
-      echoW(string.format("\xe2\x80\x8b   %s", text))
+      local text = SCORE_Y_STEP_TEXT[0]
+      local line = "0 \xc2\xbb " .. text
+      echoW(string.format("\xe2\x80\x8b   %s", line))
    end
 end
 
@@ -234,43 +296,18 @@ local function scoreTickCount(score)
    return ticks
 end
 
--- Rough score shown after the border: floor(|score|/100), i.e. the same
--- 100-point unit the tick count uses. Always shown as a plain positive
--- number - the S/Y label already says who's ahead, so the number is that
--- side's margin, not a signed raw score. Any nonzero magnitude shows at
--- least 1 (matches scoreStep's rule) so "barely ahead" never prints as 0,
--- which would misleadingly read as even. Mate scores (|score| >= MATE_VALUE)
--- print as "MATE" instead of a huge meaningless number.
-local function roughScoreValue(score)
-   local mag = math.abs(score)
-   if mag >= MATE_VALUE then
-      return "MATE"
-   end
-   if mag <= 0 then
-      return "0"
-   end
-   return tostring(math.max(1, math.floor(mag / 100)))
-end
-
 -- corner: "top" uses +/╔╗ style corners, "bottom" uses +/╚╝ style corners.
 -- withLabel: when true (used on the top border only), prefixes the line
 -- with "S"/"Y" directly against the border (no gap) - S when Sunfish is
--- ahead (score positive), Y when you're ahead (score negative) - and
--- appends the rough score number after the right cap.
+-- ahead (score positive), Y when you're ahead (score negative). The rough
+-- score number is no longer appended here - it's shown before the
+-- evaluation text on the printEngineScore() line instead (e.g. "6 - Solid
+-- positional edge").
 local function buildScoreBorderLine(unicodeMode, corner, withLabel)
    local score = CURRENT_ENGINE_SCORE
    local hasIndicator = score ~= nil and score ~= 0
 
-   local lead
-   if withLabel then
-      if hasIndicator then
-         lead = ((score < 0) and "Y" or "S") .. " "
-      else
-         lead = "  "
-      end
-   else
-      lead = hasIndicator and BORDER_LEAD_SPACES_COLORED or BORDER_LEAD_SPACES
-   end
+   local lead = hasIndicator and BORDER_LEAD_SPACES_COLORED or BORDER_LEAD_SPACES
 
    local leftCap, fill, rightCap
    if unicodeMode then
@@ -298,10 +335,6 @@ local function buildScoreBorderLine(unicodeMode, corner, withLabel)
    end
 
    local line = leftCap .. table.concat(cells) .. rightCap
-
-   if withLabel and score ~= nil then
-      line = line .. " " .. roughScoreValue(score)
-   end
 
    return line, colorFn
 end
