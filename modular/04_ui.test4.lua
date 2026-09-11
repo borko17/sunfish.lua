@@ -254,19 +254,17 @@ function printEngineScore()
    if score < 0 then
       local text = SCORE_Y_STEP_TEXT[step]
       local line = roughScoreValue(score) .. " \xc2\xbb " .. text
-      echoS(string.format("\xe2\x80\x8b   %s", text))
+      echoS(string.format("\xe2\x80\x8b   %s", line))
    elseif score > 0 then
       local text = SCORE_S_STEP_TEXT[-step]
       local line = "-" .. roughScoreValue(score) .. " \xc2\xbb " .. text
-      echoE(string.format("\xe2\x80\x8b   %s", text))
+      echoE(string.format("\xe2\x80\x8b   %s", line))
    else
       local text = SCORE_Y_STEP_TEXT[0]
       local line = "0 \xc2\xbb " .. text
-      echoW(string.format("\xe2\x80\x8b   %s", text))
+      echoW(string.format("\xe2\x80\x8b   %s", line))
    end
 end
-
-
 
 -- Builds a border line (top or bottom) with a score indicator embedded in
 -- it. Each 100 points of |score| earns one tick mark: 1-99 -> 1 tick
@@ -309,12 +307,7 @@ local function buildScoreBorderLine(unicodeMode, corner, withLabel)
    local score = CURRENT_ENGINE_SCORE
    local hasIndicator = score ~= nil and score ~= 0
 
-   local lead
-   if withLabel then
-      lead = "  "
-   else
-      lead = hasIndicator and BORDER_LEAD_SPACES_COLORED or BORDER_LEAD_SPACES
-   end
+   local lead = hasIndicator and BORDER_LEAD_SPACES_COLORED or BORDER_LEAD_SPACES
 
    local leftCap, fill, rightCap
    if unicodeMode then
