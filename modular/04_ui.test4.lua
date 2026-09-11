@@ -254,17 +254,19 @@ function printEngineScore()
    if score < 0 then
       local text = SCORE_Y_STEP_TEXT[step]
       local line = roughScoreValue(score) .. " \xc2\xbb " .. text
-      echoS(string.format("\xe2\x80\x8b   %s", line))
+      echoS(string.format("\xe2\x80\x8b   %s", text))
    elseif score > 0 then
       local text = SCORE_S_STEP_TEXT[-step]
       local line = "-" .. roughScoreValue(score) .. " \xc2\xbb " .. text
-      echoE(string.format("\xe2\x80\x8b   %s", line))
+      echoE(string.format("\xe2\x80\x8b   %s", text))
    else
       local text = SCORE_Y_STEP_TEXT[0]
       local line = "0 \xc2\xbb " .. text
-      echoW(string.format("\xe2\x80\x8b   %s", line))
+      echoW(string.format("\xe2\x80\x8b   %s", text))
    end
 end
+
+
 
 -- Builds a border line (top or bottom) with a score indicator embedded in
 -- it. Each 100 points of |score| earns one tick mark: 1-99 -> 1 tick
