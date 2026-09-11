@@ -240,6 +240,15 @@ function printEngineScore()
       return
    end
 
+   if math.abs(score) >= MATE_VALUE then
+      if score < 0 then
+         echoS(string.format("\xe2\x80\x8b   %s", "MATE - Checkmate"))
+      else
+         echoE(string.format("\xe2\x80\x8b   %s", "MATE - Checkmate"))
+      end
+      return
+   end
+
    local step = scoreStep(score)
 
    if score < 0 then
